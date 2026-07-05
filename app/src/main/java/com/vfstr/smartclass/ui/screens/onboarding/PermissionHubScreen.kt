@@ -1,21 +1,18 @@
 package com.vfstr.smartclass.ui.screens.onboarding
 
 import android.Manifest
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,14 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.*
+import com.vfstr.smartclass.ui.components.GlassmorphicCard
 import com.vfstr.smartclass.ui.theme.DesignSystem
+import kotlinx.coroutines.launch
 
 data class PermissionRationale(
     val id: String,
@@ -92,12 +90,12 @@ val rationales = listOf(
     )
 )
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun PermissionHubScreen(
     onPermissionsGranted: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val dndManager = remember { com.vfstr.smartclass.utils.DndManager(context) }
     
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -138,176 +136,210 @@ fun PermissionHubScreen(
                      bluetoothGranted &&
                      dndGranted
 
-    Column(
+    val pagerState = rememberPagerState(pageCount = { rationales.size })
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DesignSystem.Background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        Text(
-            text = "Prerequisites",
-            color = DesignSystem.TextPrimary,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Text(
-            text = "SmartClass works best with these permissions. You can grant them now or manage them later in settings.",
-            color = DesignSystem.TextSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
-        )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            val rationale = rationales[page]
+            
+            val isGranted = when(rationale.id) {
+                "location" -> locationPermissionState.status.isGranted
+                "camera" -> cameraPermissionState.status.isGranted
+                "notifications" -> notificationPermissionState?.status?.isGranted ?: true
+                "dnd" -> dndGranted
+                "bluetooth" -> bluetoothGranted
+                else -> wifiPermissionState.status.isGranted
+            }
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(rationales) { rationale ->
-                val isGranted = when(rationale.id) {
-                    "location" -> locationPermissionState.status.isGranted
-                    "camera" -> cameraPermissionState.status.isGranted
-                    "notifications" -> notificationPermissionState?.status?.isGranted ?: true
-                    "dnd" -> dndGranted
-                    "bluetooth" -> bluetoothGranted
-                    else -> wifiPermissionState.status.isGranted
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp, vertical = 64.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(CircleShape)
+                        .background(rationale.color.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = rationale.icon,
+                        contentDescription = null,
+                        tint = rationale.color,
+                        modifier = Modifier.size(72.dp)
+                    )
                 }
 
-                PermissionCard(
-                    rationale = rationale,
-                    isGranted = isGranted,
-                    isDenied = explicitlyDenied[rationale.id] ?: false,
-                    onGrantClick = {
-                        explicitlyDenied[rationale.id] = false
-                        when(rationale.id) {
-                            "location" -> locationPermissionState.launchPermissionRequest()
-                            "camera" -> cameraPermissionState.launchPermissionRequest()
-                            "notifications" -> notificationPermissionState?.launchPermissionRequest()
-                            "dnd" -> context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                            "bluetooth" -> if (android.os.Build.VERSION.SDK_INT >= 31) bluetoothPermissionsState?.launchMultiplePermissionRequest()
-                            else -> wifiPermissionState.launchPermissionRequest()
-                        }
-                    },
-                    onDenyClick = {
-                        explicitlyDenied[rationale.id] = true
-                    }
+                Spacer(modifier = Modifier.height(48.dp))
+                
+                Text(
+                    text = rationale.title,
+                    color = DesignSystem.TextPrimary,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = rationale.description,
+                    color = DesignSystem.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp
+                )
+
+                Spacer(modifier = Modifier.height(64.dp))
+
+                if (isGranted) {
+                    GlassmorphicCard(
+                        borderColor = DesignSystem.Success.copy(alpha = 0.5f),
+                        backgroundColor = DesignSystem.Success.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, tint = DesignSystem.Success)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Permission Granted", color = DesignSystem.Success, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else if (explicitlyDenied[rationale.id] == true) {
+                    GlassmorphicCard(
+                        borderColor = DesignSystem.Danger.copy(alpha = 0.5f),
+                        backgroundColor = DesignSystem.Danger.copy(alpha = 0.1f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Cancel, null, tint = DesignSystem.Danger)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Permission Denied", color = DesignSystem.Danger, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    explicitlyDenied[rationale.id] = false
+                                    requestPermission(rationale.id, locationPermissionState, cameraPermissionState, notificationPermissionState, wifiPermissionState, bluetoothPermissionsState, context)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Danger)
+                            ) {
+                                Text("Retry", color = Color.White)
+                            }
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            requestPermission(rationale.id, locationPermissionState, cameraPermissionState, notificationPermissionState, wifiPermissionState, bluetoothPermissionsState, context)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = rationale.color),
+                        shape = RoundedCornerShape(DesignSystem.CornerRadius)
+                    ) {
+                        Text("Allow Access", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(onClick = { explicitlyDenied[rationale.id] = true }) {
+                        Text("Not Now", color = DesignSystem.TextMuted)
+                    }
+                }
             }
         }
 
-        Button(
-            onClick = { onPermissionsGranted() },
-            enabled = true,
+        // Pager Indicators & Navigation
+        Row(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = DesignSystem.Cyan,
-            ),
-            shape = RoundedCornerShape(DesignSystem.CornerRadius)
+                .padding(32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (allGranted) "Finish Setup" else "Continue to App",
-                color = Color.Black,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(rationales.size) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) DesignSystem.Cyan else DesignSystem.Border
+                    val width = if (pagerState.currentPage == iteration) 24.dp else 8.dp
+                    Box(
+                        modifier = Modifier
+                            .height(8.dp)
+                            .width(width)
+                            .clip(CircleShape)
+                            .background(color)
+                    )
+                }
+            }
+
+            if (pagerState.currentPage < rationales.size - 1) {
+                IconButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
+                    },
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(DesignSystem.Surface)
+                        .border(1.dp, DesignSystem.Border, CircleShape)
+                ) {
+                    Icon(Icons.Default.ArrowForward, contentDescription = "Next", tint = Color.White)
+                }
+            } else {
+                Button(
+                    onClick = { onPermissionsGranted() },
+                    modifier = Modifier.height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (allGranted) DesignSystem.Cyan else DesignSystem.Surface,
+                        contentColor = if (allGranted) Color.Black else Color.White
+                    ),
+                    shape = RoundedCornerShape(28.dp),
+                    border = if (!allGranted) BorderStroke(1.dp, DesignSystem.Border) else null
+                ) {
+                    Text(
+                        text = if (allGranted) "Finish Setup" else "Skip & Finish",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-@Composable
-fun PermissionCard(
-    rationale: PermissionRationale, 
-    isGranted: Boolean,
-    isDenied: Boolean,
-    onGrantClick: () -> Unit,
-    onDenyClick: () -> Unit
+@OptIn(ExperimentalPermissionsApi::class)
+private fun requestPermission(
+    id: String,
+    locationPermissionState: PermissionState,
+    cameraPermissionState: PermissionState,
+    notificationPermissionState: PermissionState?,
+    wifiPermissionState: PermissionState,
+    bluetoothPermissionsState: MultiplePermissionsState?,
+    context: android.content.Context
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(DesignSystem.CornerRadius))
-            .background(DesignSystem.CardBg)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(rationale.color.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = rationale.icon,
-                contentDescription = null,
-                tint = rationale.color,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = rationale.title,
-                color = DesignSystem.TextPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Text(
-                text = rationale.description,
-                color = DesignSystem.TextSecondary,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        if (isGranted) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = "Granted",
-                tint = DesignSystem.Success,
-                modifier = Modifier.size(32.dp)
-            )
-        } else if (isDenied) {
-            IconButton(onClick = onGrantClick) {
-                Icon(
-                    imageVector = Icons.Default.Cancel,
-                    contentDescription = "Denied",
-                    tint = DesignSystem.Danger,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        } else {
-            Column(horizontalAlignment = Alignment.End) {
-                Button(
-                    onClick = onGrantClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = rationale.color),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp).fillMaxWidth(0.3f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Allow", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(4.dp))
-                OutlinedButton(
-                    onClick = onDenyClick,
-                    border = BorderStroke(1.dp, DesignSystem.TextMuted),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp).fillMaxWidth(0.3f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Deny", color = DesignSystem.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+    when(id) {
+        "location" -> locationPermissionState.launchPermissionRequest()
+        "camera" -> cameraPermissionState.launchPermissionRequest()
+        "notifications" -> notificationPermissionState?.launchPermissionRequest()
+        "dnd" -> context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        "bluetooth" -> if (android.os.Build.VERSION.SDK_INT >= 31) bluetoothPermissionsState?.launchMultiplePermissionRequest()
+        else -> wifiPermissionState.launchPermissionRequest()
     }
 }
