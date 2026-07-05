@@ -28,6 +28,8 @@ import com.vfstr.smartclass.ui.components.GlassmorphicCard
 import com.vfstr.smartclass.ui.components.RadialGauge
 import com.vfstr.smartclass.ui.screens.EmptyStatePlaceholder
 import com.vfstr.smartclass.ui.theme.DesignSystem
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -303,8 +305,6 @@ fun ScreenStudentOD(
     }
 }
 
-@androidx.lifecycle.viewmodel.compose.viewModel
-@androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun ScreenStudentCertificates(
     vm: MainViewModel,
@@ -379,7 +379,7 @@ class MoocViewModel @javax.inject.Inject constructor(
     val isLoading: kotlinx.coroutines.flow.StateFlow<Boolean> = _isLoading
     
     fun loadMOOCs() {
-        androidx.lifecycle.viewModelScope.launch {
+        viewModelScope.launch {
             _isLoading.value = true
             try {
                 _enrollments.value = api.getMOOCEnrollments(emptyMap())
