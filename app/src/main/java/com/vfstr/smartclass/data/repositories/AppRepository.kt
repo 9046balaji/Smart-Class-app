@@ -97,19 +97,6 @@ class AppRepository @Inject constructor(
     private fun String.capitalize() = this.lowercase().replaceFirstChar { it.uppercase() }
 
     suspend fun loginStaff(username: String, pin: String): Boolean {
-        // Mock Login Logic (README Credentials)
-        val mockRole = when (username.lowercase()) {
-            "superadmin" -> UserRole.superadmin
-            "rao" -> UserRole.admin
-            "staff" -> UserRole.viewer
-            else -> null
-        }
-        
-        if (mockRole != null) {
-            securePrefs.saveMockUser(username.capitalize(), mockRole)
-            securePrefs.saveStaffToken("mock_token_${mockRole.name}")
-            return true
-        }
 
         val userBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
         val passBody = pin.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -124,14 +111,6 @@ class AppRepository @Inject constructor(
     }
 
     suspend fun loginStudent(rollNo: String, dob: String): Boolean {
-        // Mock Student Login (README Credentials)
-        // Note: UI sends ISO_DATE (YYYY-MM-DD), README lists DD-MM-YYYY. We accept both for testing.
-        val isValidMockDob = dob == "15-08-2004" || dob == "2004-08-15"
-        if ((rollNo == "22L11A0501" || rollNo == "22L11A0502") && isValidMockDob) {
-            securePrefs.saveMockUser(rollNo, UserRole.student)
-            securePrefs.saveStudentToken("mock_token_student")
-            return true
-        }
 
         return try {
             val body = mapOf("student_id" to rollNo, "dob" to dob)
@@ -163,22 +142,7 @@ class AppRepository @Inject constructor(
             entity
         } catch (e: Exception) {
             val cached = dao.getStats()
-            if (cached != null) cached else {
-                // Return dummy stats for testing (README Fallback)
-                CachedStatsEntity(
-                    presentCount = 145, 
-                    totalCount = 1250, 
-                    activeSessions = 4, 
-                    eventsCount = 850, 
-                    onlineDevices = 12, 
-                    totalDevices = 15, 
-                    offlineAlerts = 2, 
-                    reviewWeek = 14, 
-                    todayPercentage = 85f, 
-                    weeklyPercentage = 82f, 
-                    monthlyPercentage = 78f
-                )
-            }
+            cached ?: CachedStatsEntity(0, 0, 0, 0, 0, 0, 0, 0, 0f, 0f, 0f)
         }
     }
 
@@ -187,41 +151,7 @@ class AppRepository @Inject constructor(
             val response = api.getAttendanceEvents(filters)
             response.items.map { mapDtoToEvent(it) }
         } catch (e: Exception) {
-            // Mock attendance events
-            listOf(
-                AttendanceEvent(
-                    id = "e1",
-                    studentId = "22L11A0501",
-                    studentName = "Student One",
-                    rollNo = "22L11A0501",
-                    sessionId = "s1",
-                    roomId = "A-401",
-                    roomName = "A-401",
-                    room = "A-401",
-                    section = "A",
-                    department = "CSAI",
-                    confidence = 0.95f,
-                    status = AttendanceStatus.Present,
-                    source = AttendanceSource.Camera,
-                    timestamp = "2026-05-23T10:00:00"
-                ),
-                AttendanceEvent(
-                    id = "e2",
-                    studentId = "22L11A0502",
-                    studentName = "Student Two",
-                    rollNo = "22L11A0502",
-                    sessionId = "s1",
-                    roomId = "A-401",
-                    roomName = "A-401",
-                    room = "A-401",
-                    section = "B",
-                    department = "CSAI",
-                    confidence = 0.88f,
-                    status = AttendanceStatus.Present,
-                    source = AttendanceSource.Override,
-                    timestamp = "2026-05-23T10:05:00"
-                )
-            )
+            emptyList()
         }
     }
 
@@ -233,49 +163,7 @@ class AppRepository @Inject constructor(
             mapped
         } catch (e: Exception) {
             val cached = dao.getSessions().map { it.toDomain() }
-            if (cached.isNotEmpty()) cached else {
-                // Mock sessions
-                listOf(
-                    ClassSession(
-                        id = "s1",
-                        roomId = null,
-                        roomName = null,
-                        room = "A-401",
-                        subjectCode = "CS501",
-                        subjectName = "Artificial Intelligence",
-                        section = "A",
-                        department = "CSAI",
-                        year = "1",
-                        facultyId = null,
-                        facultyName = "Dr. Rao",
-                        sessionType = "L",
-                        startTime = "09:00",
-                        status = SessionStatus.Active,
-                        attendanceCount = 45,
-                        totalStudents = 60,
-                        durationMinutes = 50
-                    ),
-                    ClassSession(
-                        id = "s2",
-                        roomId = null,
-                        roomName = null,
-                        room = "A-402",
-                        subjectCode = "CS502",
-                        subjectName = "Machine Learning",
-                        section = "B",
-                        department = "CSAI",
-                        year = "1",
-                        facultyId = null,
-                        facultyName = "Dr. Rao",
-                        sessionType = "L",
-                        startTime = "11:00",
-                        status = SessionStatus.Scheduled,
-                        attendanceCount = 0,
-                        totalStudents = 60,
-                        durationMinutes = 50
-                    )
-                )
-            }
+            cached
         }
     }
 
@@ -358,50 +246,7 @@ class AppRepository @Inject constructor(
             mapped
         } catch (e: Exception) {
             val cached = dao.getStudents().map { it.toDomain() }
-            if (cached.isNotEmpty()) cached else {
-                // Dummy student list for testing (README Fallback)
-                listOf(
-                    Student(
-                        id = "1",
-                        studentId = "22L11A0501",
-                        name = "Student One",
-                        rollNo = "22L11A0501",
-                        department = "CSAI",
-                        year = "2022",
-                        section = "A",
-                        faceEnrolled = true,
-                        biometricConsent = true,
-                        dob = "2004-08-15",
-                        cgpa = 8.5
-                    ),
-                    Student(
-                        id = "2",
-                        studentId = "22L11A0502",
-                        name = "Student Two",
-                        rollNo = "22L11A0502",
-                        department = "CSAI",
-                        year = "2022",
-                        section = "B",
-                        faceEnrolled = true,
-                        biometricConsent = true,
-                        dob = "2004-08-15",
-                        cgpa = 7.8
-                    ),
-                    Student(
-                        id = "3",
-                        studentId = "23B91A0501",
-                        name = "Divya Naidu",
-                        rollNo = "23B91A0501",
-                        department = "CS",
-                        year = "2023",
-                        section = "A",
-                        faceEnrolled = false,
-                        biometricConsent = true,
-                        dob = "2005-05-12",
-                        cgpa = 9.2
-                    )
-                )
-            }
+            cached
         }
     }
 
@@ -586,17 +431,7 @@ class AppRepository @Inject constructor(
         return try {
             api.getStaffProfile()
         } catch (e: Exception) {
-            // Mock profile
-            ProfileResponse(
-                id = "staff_1",
-                username = securePrefs.getUserName(),
-                full_name = "Dr. " + securePrefs.getUserName(),
-                role = securePrefs.getUserRole()?.name ?: "faculty",
-                is_active = true,
-                department = "CSAI",
-                email = "staff@vignan.ac.in",
-                permissions = listOf("overview", "attendance", "compliance")
-            )
+            throw e
         }
     }
 
