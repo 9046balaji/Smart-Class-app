@@ -124,11 +124,20 @@ fun ScreenScanner(
 
     var captureTrigger by remember { mutableIntStateOf(0) }
 
+    val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.handleImageUpload("data:image/jpeg;base64,mock_data")
+            try {
+                val bytes = context.contentResolver.openInputStream(it)?.readBytes()
+                if (bytes != null) {
+                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                    viewModel.handleImageUpload("data:image/jpeg;base64,$base64")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

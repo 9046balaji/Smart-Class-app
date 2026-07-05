@@ -64,7 +64,7 @@ fun CameraPreview(
                         val buffer = image.planes[0].buffer
                         val bytes = ByteArray(buffer.remaining())
                         buffer.get(bytes)
-                        val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
+                        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
                         onImageCaptured("data:image/jpeg;base64,$base64")
                         image.close()
                     }
