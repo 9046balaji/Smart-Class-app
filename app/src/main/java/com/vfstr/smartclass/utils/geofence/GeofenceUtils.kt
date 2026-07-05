@@ -93,10 +93,7 @@ object GeofenceUtils {
     /**
      * Tier 3: WiFi BSSID Cross-check (Rule 7)
      */
-    val TRUSTED_BSSIDS = listOf(
-        "00:11:22:33:44:55", // Mock BSSID for A-Block
-        "AA:BB:CC:DD:EE:FF"  // Mock BSSID for H-Block
-    )
+    val TRUSTED_BSSIDS = listOf<String>()
 
     fun isWifiTrusted(bssid: String?): Boolean {
         if (bssid == null) return false
@@ -173,9 +170,8 @@ object GeofenceUtils {
     )
 
     fun isWithinBuilding(lat: Double, lon: Double, buildingId: String): Boolean {
-        // This would require a more detailed building map, for now we use anchor points
-        // In a real app, buildingId would map to one of the anchors
-        val centroid = CAMPUS_ANCHOR_POINTS.firstOrNull() // Placeholder
+        val index = buildingId.toIntOrNull() ?: 0
+        val centroid = CAMPUS_ANCHOR_POINTS.getOrNull(index) ?: CAMPUS_ANCHOR_POINTS.firstOrNull()
         return haversineMeters(lat, lon, centroid?.lat ?: 0.0, centroid?.lon ?: 0.0) <= DEFAULT_BUILDING_RADIUS_M
     }
 }
