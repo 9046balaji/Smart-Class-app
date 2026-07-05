@@ -1,0 +1,6 @@
+{
+  "name": "SmartClass",
+  "description": "Enterprise-grade attendance and academic management system for Vignan's Foundation for Science, Technology & Research (VFSTR). Features high-fidelity visuals, dual-tab JWT authentication, 3D metric cards, real-time activity feed, precise geofencing, CameraX-driven attendance scanning, customizable student portals, and advanced academic analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
