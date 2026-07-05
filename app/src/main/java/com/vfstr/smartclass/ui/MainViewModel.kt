@@ -800,7 +800,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun faceEnrollmentAction(rollNo: String) {
-        // TODO: Implement face enrollment navigation or logic
+        currentRoute.value = "${Navigation.ROUTE_SCANNER}?mode=enroll&rollNo=$rollNo"
     }
 
     // Excel import error states

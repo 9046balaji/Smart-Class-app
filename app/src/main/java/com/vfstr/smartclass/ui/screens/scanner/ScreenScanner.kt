@@ -56,6 +56,8 @@ import kotlinx.coroutines.delay
 fun ScreenScanner(
     sectionId: String?,
     sessionIdFromUrl: String?,
+    enrollmentMode: Boolean = false,
+    enrollmentRollNo: String? = null,
     onNavigateBack: () -> Unit,
     viewModel: ScannerViewModel = hiltViewModel(),
 ) {
@@ -112,7 +114,8 @@ fun ScreenScanner(
         )
     }
 
-    LaunchedEffect(sectionId, sessionIdFromUrl) {
+    LaunchedEffect(sectionId, sessionIdFromUrl, enrollmentMode, enrollmentRollNo) {
+        viewModel.setEnrollmentMode(enrollmentMode, enrollmentRollNo)
         if (sectionId != null) {
             viewModel.setSectionId(sectionId)
         }
@@ -147,8 +150,13 @@ fun ScreenScanner(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Recognition Terminal", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = DesignSystem.TextPrimary)
-                        Text("Target: ${sectionId ?: "N/A"}", fontSize = 11.sp, color = DesignSystem.Cyan, fontWeight = FontWeight.Bold)
+                        if (enrollmentMode) {
+                            Text("Face Enrollment Terminal", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = DesignSystem.TextPrimary)
+                            Text("Target: $enrollmentRollNo", fontSize = 11.sp, color = DesignSystem.Cyan, fontWeight = FontWeight.Bold)
+                        } else {
+                            Text("Recognition Terminal", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = DesignSystem.TextPrimary)
+                            Text("Target: ${sectionId ?: "N/A"}", fontSize = 11.sp, color = DesignSystem.Cyan, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 navigationIcon = {
@@ -157,8 +165,10 @@ fun ScreenScanner(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.syncIndex() }) {
-                        Text("SYNC INDEX", color = DesignSystem.Cyan, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                    if (!enrollmentMode) {
+                        TextButton(onClick = { viewModel.syncIndex() }) {
+                            Text("SYNC INDEX", color = DesignSystem.Cyan, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DesignSystem.Surface)

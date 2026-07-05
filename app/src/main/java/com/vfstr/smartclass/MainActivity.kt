@@ -320,10 +320,15 @@ class MainActivity : FragmentActivity() {
                                 }
 
                                 resolvedScreen.startsWith(Navigation.ROUTE_SCANNER) -> {
-                                    val sectionId = if (resolvedScreen.contains("?section=")) resolvedScreen.substringAfter("?section=") else null
+                                    val uri = android.net.Uri.parse("app://" + resolvedScreen)
+                                    val sectionId = uri.getQueryParameter("section")
+                                    val mode = uri.getQueryParameter("mode")
+                                    val rollNo = uri.getQueryParameter("rollNo")
                                     ScreenScanner(
                                         sectionId = sectionId,
                                         sessionIdFromUrl = null,
+                                        enrollmentMode = (mode == "enroll"),
+                                        enrollmentRollNo = rollNo,
                                         onNavigateBack = { vm.currentRoute.value = Navigation.ROUTE_ATTENDANCE }
                                     )
                                 }
