@@ -13,10 +13,17 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONObject
+
 @HiltViewModel
 class AttendanceViewModel @Inject constructor(
     private val enrollmentDataSource: EnrollmentDataSource,
     private val attendanceRepository: AttendanceRepository,
+    private val okHttpClient: OkHttpClient,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -227,5 +234,39 @@ class AttendanceViewModel @Inject constructor(
                 _isSubmitting.value = false
             }
         }
+    }
+
+    private var webSocket: WebSocket? = null
+
+    private fun connectWebSocket(sessionId: String) {
+        webSocket?.cancel()
+        if (sessionId.isEmpty()) return
+
+        val request = Request.Builder()
+            .url("wss://smartclass-api.vfstr.ac.in/ws/attendance?session_id=$sessionId")
+            .build()
+            
+        webSocket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    val json = JSONObject(text)
+                    if (json.optString("type") == "attendance_marked") {
+                        val studentId = json.optString("student_id")
+                        if (studentId.isNotEmpty()) {
+                            val current = _selection.value.toMutableMap()
+                            current[studentId] = true
+                            _selection.value = current
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        })
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocket?.cancel()
     }
 }
