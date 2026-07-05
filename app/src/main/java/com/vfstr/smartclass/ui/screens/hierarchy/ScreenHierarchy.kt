@@ -34,6 +34,8 @@ import com.vfstr.smartclass.domain.models.LocalEnrollmentStudent
 import com.vfstr.smartclass.ui.MainViewModel
 import com.vfstr.smartclass.ui.components.GlassmorphicCard
 import com.vfstr.smartclass.ui.theme.DesignSystem
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 data class HierarchyNode(
     val id: String,
@@ -43,8 +45,6 @@ data class HierarchyNode(
 )
 
 @OptIn(ExperimentalTextApi::class)
-@androidx.lifecycle.viewmodel.compose.viewModel
-@androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun ScreenHierarchy(
     vm: MainViewModel,
@@ -368,7 +368,7 @@ class HierarchyViewModel @javax.inject.Inject constructor(
     val hierarchyRoot: kotlinx.coroutines.flow.StateFlow<HierarchyNode?> = _hierarchyRoot
     
     fun loadHierarchy() {
-        androidx.lifecycle.viewModelScope.launch {
+        viewModelScope.launch {
             try {
                 val depts = api.getDepartments()
                 val years = api.getYears()
