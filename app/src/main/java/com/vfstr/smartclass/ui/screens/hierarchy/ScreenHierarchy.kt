@@ -43,28 +43,21 @@ data class HierarchyNode(
 )
 
 @OptIn(ExperimentalTextApi::class)
+@androidx.lifecycle.viewmodel.compose.viewModel
+@androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun ScreenHierarchy(
     vm: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hierarchyVm: HierarchyViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val textMeasurer = rememberTextMeasurer()
     var viewMode by remember { mutableStateOf("Tree") } // Drilldown or Tree
-
-    // Mock hierarchy data for tree
-    val university = HierarchyNode(
-        "vfstr", "VFSTR University", "University",
-        listOf(
-            HierarchyNode("cet", "College of Eng & Tech", "College", listOf(
-                HierarchyNode("csai", "CSAI Dept", "Department", listOf(
-                    HierarchyNode("y3", "Year III", "Year", listOf(
-                        HierarchyNode("sa", "Section A", "Section"),
-                        HierarchyNode("sb", "Section B", "Section")
-                    ))
-                ))
-            ))
-        )
-    )
+    val rootNode by hierarchyVm.hierarchyRoot.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        hierarchyVm.loadHierarchy()
+    }
 
     var selectedYear by remember { mutableStateOf("2025") }
     var selectedBranch by remember { mutableStateOf<String?>(null) }
@@ -112,7 +105,13 @@ fun ScreenHierarchy(
                         .background(DesignSystem.Surface)
                         .border(1.dp, DesignSystem.Border, RoundedCornerShape(DesignSystem.CornerRadius))
                 ) {
-                    HierarchyTreeCanvas(university, textMeasurer)
+                    if (rootNode != null) {
+                        HierarchyTreeCanvas(rootNode!!, textMeasurer)
+                    } else {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = DesignSystem.Cyan)
+                        }
+                    }
                 }
             } else {
                 // Drilldown Logic
@@ -359,3 +358,40 @@ fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHierarchyNode(
         drawHierarchyNode(child, childX, childY, level + 1, textMeasurer)
     }
 }
+
+@dagger.hilt.android.lifecycle.HiltViewModel
+class HierarchyViewModel @javax.inject.Inject constructor(
+    private val api: com.vfstr.smartclass.data.remote.api.RetrofitApi
+) : androidx.lifecycle.ViewModel() {
+    
+    private val _hierarchyRoot = kotlinx.coroutines.flow.MutableStateFlow<HierarchyNode?>(null)
+    val hierarchyRoot: kotlinx.coroutines.flow.StateFlow<HierarchyNode?> = _hierarchyRoot
+    
+    fun loadHierarchy() {
+        androidx.lifecycle.viewModelScope.launch {
+            try {
+                val depts = api.getDepartments()
+                val years = api.getYears()
+                val sections = api.getSections()
+                
+                val deptNodes = depts.map { dept ->
+                    HierarchyNode(dept, "$dept Dept", "Department", years.map { year ->
+                        HierarchyNode("${dept}_$year", "Year $year", "Year", sections.map { sec ->
+                            HierarchyNode("${dept}_${year}_$sec", "Section $sec", "Section")
+                        })
+                    })
+                }
+                
+                val root = HierarchyNode(
+                    "vfstr", "VFSTR University", "University",
+                    listOf(HierarchyNode("cet", "College of Eng & Tech", "College", deptNodes))
+                )
+                
+                _hierarchyRoot.value = root
+            } catch (e: Exception) {
+                // Ignore for now
+            }
+        }
+    }
+}
+
