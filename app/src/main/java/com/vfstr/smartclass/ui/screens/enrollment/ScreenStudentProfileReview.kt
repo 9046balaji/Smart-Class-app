@@ -36,11 +36,13 @@ fun ScreenStudentProfileReview(
     studentId: String,
     onNavigateBack: () -> Unit
 ) {
-    // Note: Mocking profile for UI structure, real impl needs StudentManagementRepository.getStudentProfile
-    // which returns EnrollmentStudent (photos + fields)
     var studentProfile by remember { mutableStateOf<EnrollmentStudent?>(null) }
     var selectedPhotoUrl by remember { mutableStateOf<String?>(null) }
     var showReviewDialog by remember { mutableStateOf<ReviewAction?>(null) }
+    
+    LaunchedEffect(studentId) {
+        studentProfile = vm.fetchStudentProfile(studentId)
+    }
 
     Scaffold(
         topBar = {

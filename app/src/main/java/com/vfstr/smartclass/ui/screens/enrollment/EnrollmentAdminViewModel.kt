@@ -73,4 +73,13 @@ class EnrollmentAdminViewModel @Inject constructor(
             }
         }
     }
+
+    suspend fun fetchStudentProfile(id: String): EnrollmentStudent? {
+        return try {
+            repository.getStudentProfile(id)
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        }
+    }
 }
