@@ -44,8 +44,7 @@ fun ScreenStudentOverview(
 
     LaunchedEffect(Unit) {
         // Only start if permissions are already granted to avoid silent crash/ANR
-        val hasFine = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (hasFine) {
+        if (com.vfstr.smartclass.utils.PermissionUtils.hasBleScanPermissions(context)) {
             vm.startBleScanner()
         }
     }

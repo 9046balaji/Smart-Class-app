@@ -429,6 +429,10 @@ class MainViewModel @Inject constructor(
     }
 
     fun startBleScanner() {
+        if (!com.vfstr.smartclass.utils.PermissionUtils.hasBleScanPermissions(context)) {
+            android.util.Log.e("BLE", "Missing BLE scan permissions. Cannot start scanner.")
+            return
+        }
         val intent = Intent(context, com.vfstr.smartclass.data.remote.ble.BleScanService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
@@ -708,6 +712,10 @@ class MainViewModel @Inject constructor(
 
     // BLE Radar Actions
     fun startBleRadar(sessionId: String) {
+        if (!com.vfstr.smartclass.utils.PermissionUtils.hasBleAdvertisePermissions(context)) {
+            android.util.Log.e("BLE", "Missing BLE advertise permissions. Cannot start radar.")
+            return
+        }
         val intent = Intent(context, com.vfstr.smartclass.data.remote.ble.BleAdvertiserService::class.java).apply {
             putExtra("SESSION_ID", sessionId)
         }
