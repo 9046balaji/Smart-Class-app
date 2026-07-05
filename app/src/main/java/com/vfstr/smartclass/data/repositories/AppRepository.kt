@@ -142,7 +142,7 @@ class AppRepository @Inject constructor(
             entity
         } catch (e: Exception) {
             val cached = dao.getStats()
-            cached ?: CachedStatsEntity(0, 0, 0, 0, 0, 0, 0, 0, 0f, 0f, 0f)
+            cached ?: CachedStatsEntity("last_stats", 0, 0, 0, 0, 0, 0, 0, 0, 0f, 0f, 0f)
         }
     }
 
