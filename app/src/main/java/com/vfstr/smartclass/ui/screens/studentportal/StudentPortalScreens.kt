@@ -303,26 +303,92 @@ fun ScreenStudentOD(
     }
 }
 
+@androidx.lifecycle.viewmodel.compose.viewModel
+@androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun ScreenStudentCertificates(
     vm: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    moocVm: MoocViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
+    val enrollments by moocVm.enrollments.collectAsState()
+    val isLoading by moocVm.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        moocVm.loadMOOCs()
+    }
+
     Column(modifier = modifier.fillMaxSize().padding(DesignSystem.Padding)) {
         Text("Academic Certificates", style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
         Spacer(Modifier.height(16.dp))
-        EmptyStatePlaceholder(msg = "Upload and manage your external MOOC certificates.")
+        
+        if (isLoading) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(3) {
+                    com.vfstr.smartclass.ui.components.ShimmerSkeleton(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(12.dp)))
+                }
+            }
+        } else if (enrollments.isEmpty()) {
+            EmptyStatePlaceholder(msg = "Upload and manage your external MOOC certificates.")
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(enrollments) { item ->
+                    GlassmorphicCard {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(DesignSystem.Violet.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.School, null, tint = DesignSystem.Violet, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(item.course_name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("${item.platform} • ${item.credits} Credits", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            }
+                            val statusColor = if (item.status.equals("completed", true)) DesignSystem.Success else DesignSystem.Cyan
+                            Text(item.status.uppercase(), color = statusColor, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
         
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = {},
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Surface),
+            colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Cyan, contentColor = Color.Black),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Default.CloudUpload, null, tint = DesignSystem.Cyan)
+            Icon(Icons.Default.CloudUpload, null)
             Spacer(Modifier.width(8.dp))
-            Text("Select Document")
+            Text("Register New MOOC", fontWeight = FontWeight.ExtraBold)
         }
     }
 }
+
+@dagger.hilt.android.lifecycle.HiltViewModel
+class MoocViewModel @javax.inject.Inject constructor(
+    private val api: com.vfstr.smartclass.data.remote.api.RetrofitApi
+) : androidx.lifecycle.ViewModel() {
+    private val _enrollments = kotlinx.coroutines.flow.MutableStateFlow<List<com.vfstr.smartclass.data.remote.api.MOOCEnrollmentDto>>(emptyList())
+    val enrollments: kotlinx.coroutines.flow.StateFlow<List<com.vfstr.smartclass.data.remote.api.MOOCEnrollmentDto>> = _enrollments
+    
+    private val _isLoading = kotlinx.coroutines.flow.MutableStateFlow(true)
+    val isLoading: kotlinx.coroutines.flow.StateFlow<Boolean> = _isLoading
+    
+    fun loadMOOCs() {
+        androidx.lifecycle.viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                _enrollments.value = api.getMOOCEnrollments(emptyMap())
+            } catch (e: Exception) {
+                // Return empty on failure for now
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+}
+
