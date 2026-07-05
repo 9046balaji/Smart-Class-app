@@ -1,0 +1,16 @@
+{
+  "2025": {
+    "CS": {
+      "A": [
+        { "rollNumber": "25L11A0501", "name": "Sandeep Kumar", "admissionYear": "2025", "branch": "CS", "section": "A" }
+      ]
+    }
+  },
+  "2024": {
+    "AI": {
+      "B": [
+        { "rollNumber": "24L11A3101", "name": "Priya Reddy", "admissionYear": "2024", "branch": "AI", "section": "B" }
+      ]
+    }
+  }
+}

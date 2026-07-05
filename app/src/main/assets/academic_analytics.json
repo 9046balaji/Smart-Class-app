@@ -1,0 +1,12 @@
+{
+  "students": [
+    { "rollNumber": "22L11A0501", "name": "Sandeep Kumar", "department": "CSAI", "year": 3, "section": "A", "overallAttendance": 84.2, "averageMarks": 82.5 },
+    { "rollNumber": "22L11A0504", "name": "Meghana Chowdary", "department": "CSAI", "year": 3, "section": "A", "overallAttendance": 61.2, "averageMarks": 74.0 }
+  ],
+  "meta": {
+    "departments": ["CSAI", "IT", "ECE"],
+    "years": [1, 2, 3, 4],
+    "sections": ["A", "B", "C"],
+    "semesters": ["1", "2", "3", "4", "5"]
+  }
+}
