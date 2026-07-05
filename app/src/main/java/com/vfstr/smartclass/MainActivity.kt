@@ -258,15 +258,10 @@ class MainActivity : FragmentActivity() {
                                 resolvedScreen == Navigation.ROUTE_UNAUTHORIZED -> ScreenUnauthorized(vm = vm)
                                 resolvedScreen == Navigation.ROUTE_LOGIN -> ScreenLogin(vm = vm)
                                 resolvedScreen == Navigation.ROUTE_OVERVIEW -> ScreenOverview(vm = vm, onNav = { vm.currentRoute.value = it })
-                                resolvedScreen == Navigation.ROUTE_ATTENDANCE -> AttendanceScreen(
-                                    onNavigateToScanner = { sectionId ->
-                                        checkCameraPermissions()
-                                        vm.currentRoute.value = "${Navigation.ROUTE_SCANNER}?section=$sectionId"
-                                    },
-                                    onNavigateToLogs = {
-                                        vm.currentRoute.value = Navigation.ROUTE_ATTENDANCE_LOGS
-                                    }
-                                )
+                                resolvedScreen == Navigation.ROUTE_ATTENDANCE -> {
+                                    val attendanceVm: com.vfstr.smartclass.ui.screens.attendance.AttendanceViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                                    AttendanceScreen(viewModel = attendanceVm)
+                                }
                                 resolvedScreen == Navigation.ROUTE_ATTENDANCE_LOGS -> AttendanceEventViewer(
                                     vm = vm,
                                     onNavigateBack = { vm.currentRoute.value = Navigation.ROUTE_ATTENDANCE }
