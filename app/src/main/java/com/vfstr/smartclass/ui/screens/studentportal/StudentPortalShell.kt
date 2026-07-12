@@ -26,13 +26,11 @@ import com.vfstr.smartclass.ui.screens.profile.SettingsScreen
 import com.vfstr.smartclass.ui.theme.DesignSystem
 
 enum class PortalSection(val label: String, val icon: ImageVector) {
-    OVERVIEW("Overview", Icons.Default.Dashboard),
+    OVERVIEW("Dashboard", Icons.Default.Dashboard),
     ATTENDANCE("Attendance", Icons.Default.EventNote),
-    PERFORMANCE("Performance", Icons.Default.Insights),
-    ACADEMICS("Academics", Icons.Default.School),
-    OD_REQUESTS("OD Requests", Icons.Default.Description),
-    CERTIFICATES("Certificates", Icons.Default.Verified),
-    ENROLLMENT("Enrollment", Icons.Default.PersonAdd),
+    OD_REQUESTS("Leave & OD", Icons.Default.Description),
+    CERTIFICATES("MOOCs", Icons.Default.Verified),
+    ENROLLMENT("Face Sync", Icons.Default.PersonAdd),
     PROFILE("Profile", Icons.Default.Person),
     SETTINGS("Settings", Icons.Default.Settings)
 }
@@ -48,7 +46,12 @@ fun StudentPortalShell(
         modifier = modifier.fillMaxSize(),
         containerColor = DesignSystem.Background,
         topBar = {
-            PortalTopBar(vm, currentSection, onProfileClick = { currentSection = PortalSection.PROFILE })
+            PortalTopBar(
+                vm = vm,
+                section = currentSection,
+                onProfileClick = { currentSection = PortalSection.PROFILE },
+                onSettingsClick = { currentSection = PortalSection.SETTINGS }
+            )
         },
         bottomBar = {
             PortalBottomNav(currentSection) { currentSection = it }
@@ -57,10 +60,12 @@ fun StudentPortalShell(
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             Crossfade(targetState = currentSection, label = "portal_sections") { section ->
                 when (section) {
-                    PortalSection.OVERVIEW -> ScreenStudentOverview(vm)
+                    PortalSection.OVERVIEW -> ScreenStudentOverview(
+                        vm = vm,
+                        onNavigateToMOOCs = { currentSection = PortalSection.CERTIFICATES },
+                        onNavigateToLeave = { currentSection = PortalSection.OD_REQUESTS }
+                    )
                     PortalSection.ATTENDANCE -> ScreenStudentAttendance(vm)
-                    PortalSection.PERFORMANCE -> ScreenStudentPerformance(vm)
-                    PortalSection.ACADEMICS -> ScreenStudentAcademics(vm)
                     PortalSection.OD_REQUESTS -> ScreenStudentOD(vm)
                     PortalSection.CERTIFICATES -> ScreenStudentCertificates(vm)
                     PortalSection.ENROLLMENT -> EnrollmentDispatcher(vm)
@@ -74,7 +79,12 @@ fun StudentPortalShell(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PortalTopBar(vm: MainViewModel, section: PortalSection, onProfileClick: () -> Unit) {
+fun PortalTopBar(
+    vm: MainViewModel,
+    section: PortalSection,
+    onProfileClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     TopAppBar(
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -96,6 +106,9 @@ fun PortalTopBar(vm: MainViewModel, section: PortalSection, onProfileClick: () -
             }
         },
         actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Default.Settings, null, tint = DesignSystem.TextSecondary)
+            }
             IconButton(onClick = { vm.logout() }) {
                 Icon(Icons.AutoMirrored.Filled.Logout, null, tint = DesignSystem.Danger)
             }
@@ -106,8 +119,7 @@ fun PortalTopBar(vm: MainViewModel, section: PortalSection, onProfileClick: () -
 
 @Composable
 fun EnrollmentDispatcher(vm: MainViewModel) {
-    // Need to get student ID from MainViewModel
-    val studentId by vm.currentUserName.collectAsState() // Temporary: using name or ID?
+    val studentId by vm.currentUserName.collectAsState()
     val enrollmentVm: com.vfstr.smartclass.ui.screens.enrollment.EnrollmentViewModel = hiltViewModel()
     
     val requestState by enrollmentVm.requestState.collectAsState()
@@ -152,8 +164,7 @@ fun PortalBottomNav(current: PortalSection, onSelect: (PortalSection) -> Unit) {
                     BadgedBox(
                         badge = {
                             if (section == PortalSection.ENROLLMENT) {
-                                // Mock badge for now, real one from ViewModel
-                                Badge(containerColor = DesignSystem.Cyan) { Text("1") }
+                                // Mock badge for now, real one from ViewModel can be here
                             }
                         }
                     ) {
@@ -166,7 +177,7 @@ fun PortalBottomNav(current: PortalSection, onSelect: (PortalSection) -> Unit) {
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = section.label.take(8),
+                        text = section.label,
                         fontSize = 9.sp,
                         fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
                         color = if (isSel) DesignSystem.Cyan else DesignSystem.TextMuted
@@ -176,3 +187,4 @@ fun PortalBottomNav(current: PortalSection, onSelect: (PortalSection) -> Unit) {
         }
     }
 }
+
