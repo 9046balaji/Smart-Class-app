@@ -327,6 +327,33 @@ data class StudentAttendanceRecordDto(
     val marked_at: String? = null
 )
 
+data class StudentMarksDto(
+    val subject_code: String,
+    val subject_name: String,
+    val semester: String,
+    val mid1: Float?,
+    val mid2: Float?,
+    val assignment: Float?,
+    val attendance: Float?,
+    val total_obtained: Float?,
+    val total_max: Float
+)
+
+data class SemesterResultSubjectDto(
+    val subject_code: String,
+    val subject_name: String,
+    val grade: String,
+    val credits: Int,
+    val grade_points: Int
+)
+
+data class SemesterResultDto(
+    val semester: String,
+    val sgpa: Float,
+    val cgpa: Float,
+    val subjects: List<SemesterResultSubjectDto>
+)
+
 
 data class PlatformStatsDto(
     val enrolled: Int,
@@ -646,6 +673,14 @@ interface RetrofitApi {
 
     @POST("student/change-password")
     suspend fun changeStudentPassword(@Body body: Map<String, String>): Map<String, String>
+
+    @GET("student/marks")
+    suspend fun getStudentMarks(
+        @Query("semester") semester: String? = null
+    ): List<StudentMarksDto>
+
+    @GET("student/results")
+    suspend fun getStudentResults(): List<SemesterResultDto>
 
     @POST("student/attendance/check-in")
     suspend fun submitBleCheckIn(@Body req: BleCheckInRequest): AttendanceScanResult
