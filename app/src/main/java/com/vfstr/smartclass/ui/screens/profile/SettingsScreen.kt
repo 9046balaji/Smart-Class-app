@@ -130,9 +130,11 @@ fun SettingsScreen(vm: MainViewModel) {
             // Block 7: Security & Logout
             item {
                 SecurityBlock(
+                    role = currentRole,
                     biometricLockEnabled = biometricLockEnabled,
                     onToggleBiometricLock = { vm.updateBiometricLock(it) },
-                    onLogout = { vm.logout() }
+                    onLogout = { vm.logout() },
+                    vm = vm
                 )
             }
             
@@ -520,9 +522,11 @@ fun LegalPolicyRow(title: String, version: String) {
 
 @Composable
 fun SecurityBlock(
+    role: UserRole?,
     biometricLockEnabled: Boolean,
     onToggleBiometricLock: (Boolean) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    vm: MainViewModel
 ) {
     SettingsSection(title = "SECURITY & ACCESS", icon = Icons.Default.Security, tint = DesignSystem.Danger) {
         Row(
@@ -549,6 +553,80 @@ fun SecurityBlock(
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = DesignSystem.SpacingSmall), color = DesignSystem.Border)
+
+        if (role == UserRole.student) {
+            var showPasswordDialog by remember { mutableStateOf(false) }
+            
+            Button(
+                onClick = { showPasswordDialog = true },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Surface),
+                shape = RoundedCornerShape(DesignSystem.CornerRadius),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+            ) {
+                Icon(Icons.Default.Lock, contentDescription = null, tint = DesignSystem.Cyan)
+                Spacer(modifier = Modifier.width(DesignSystem.SpacingMedium))
+                Text("Change Portal Password", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            
+            Spacer(modifier = Modifier.height(DesignSystem.SpacingMedium))
+
+            if (showPasswordDialog) {
+                var currentPass by remember { mutableStateOf("") }
+                var newPass by remember { mutableStateOf("") }
+                val isChanging by vm.isPasswordChanging.collectAsState()
+                val changeSuccess by vm.passwordChangeSuccess.collectAsState()
+
+                AlertDialog(
+                    onDismissRequest = { showPasswordDialog = false; vm.passwordChangeSuccess.value = null },
+                    title = { Text("Change Password") },
+                    containerColor = DesignSystem.Surface,
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value = currentPass,
+                                onValueChange = { currentPass = it },
+                                label = { Text("Current Password") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = newPass,
+                                onValueChange = { newPass = it },
+                                label = { Text("New Password") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (changeSuccess == false) {
+                                Text("Incorrect password or update failed.", color = DesignSystem.Danger, fontSize = 12.sp)
+                            } else if (changeSuccess == true) {
+                                Text("Password changed successfully!", color = DesignSystem.Success, fontSize = 12.sp)
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (currentPass.isNotEmpty() && newPass.isNotEmpty()) {
+                                    vm.changeStudentPassword(currentPass, newPass)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Cyan, contentColor = Color.Black),
+                            enabled = !isChanging && currentPass.isNotEmpty() && newPass.isNotEmpty()
+                        ) {
+                            if (isChanging) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.Black)
+                            } else {
+                                Text("Save", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showPasswordDialog = false; vm.passwordChangeSuccess.value = null }) {
+                            Text("Cancel", color = DesignSystem.TextMuted)
+                        }
+                    }
+                )
+            }
+        }
 
         Button(
             onClick = onLogout,
