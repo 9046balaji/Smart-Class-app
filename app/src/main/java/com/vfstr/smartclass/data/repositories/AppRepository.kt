@@ -546,5 +546,21 @@ class AppRepository @Inject constructor(
             emptyList()
         }
     }
+
+    suspend fun getStudentBacklogs(): BacklogsSummaryDto? {
+        return try {
+            api.getStudentBacklogs()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getStudentMentor(): MentorDto? {
+        return try {
+            api.getStudentMentor()
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
 
