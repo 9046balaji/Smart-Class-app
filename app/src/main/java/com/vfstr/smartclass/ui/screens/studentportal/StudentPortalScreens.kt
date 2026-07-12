@@ -57,6 +57,7 @@ fun ScreenStudentOverview(
     val cgpa by vm.cgpaAnimated.collectAsState()
     val eligibility by vm.studentEligibility.collectAsState()
     val isScanning by vm.isScanningForBeacon.collectAsState()
+    var showNotificationsDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (com.vfstr.smartclass.utils.PermissionUtils.hasBleScanPermissions(context)) {
@@ -66,6 +67,11 @@ fun ScreenStudentOverview(
         vm.loadStudentBacklogs()
         vm.loadSemesterResults()
         vm.loadStudentFees()
+        vm.loadStudentNotifications()
+    }
+
+    if (showNotificationsDialog) {
+        NotificationsDialog(vm) { showNotificationsDialog = false }
     }
 
     Column(
@@ -85,14 +91,23 @@ fun ScreenStudentOverview(
             Column(modifier = Modifier.padding(DesignSystem.PaddingLarge)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("REGULATED STUDENT PORTAL", color = DesignSystem.Cyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
-                    if (isScanning) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            ScanningIndicator()
-                            Text(
-                                text = "Last: ${java.text.SimpleDateFormat("HH:mm", Locale.US).format(java.util.Date())}",
-                                color = DesignSystem.TextMuted,
-                                fontSize = 8.sp
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { showNotificationsDialog = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        if (isScanning) {
+                            Spacer(Modifier.width(8.dp))
+                            Column(horizontalAlignment = Alignment.End) {
+                                ScanningIndicator()
+                                Text(
+                                    text = "Last: ${java.text.SimpleDateFormat("HH:mm", Locale.US).format(java.util.Date())}",
+                                    color = DesignSystem.TextMuted,
+                                    fontSize = 8.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -1289,17 +1304,17 @@ fun ScreenStudentMarks(
                             HorizontalDivider(color = DesignSystem.Border)
                             Spacer(Modifier.height(12.dp))
 
-                            ComponentMarksBar("Mid-1 Exams", item.mid1 ?: 0f, 10f, DesignSystem.Cyan)
+                            ComponentMarksBar("Mid-1 Exams", item.mid1, 10f, DesignSystem.Cyan)
                             Spacer(Modifier.height(8.dp))
-                            ComponentMarksBar("Mid-2 Exams", item.mid2 ?: 0f, 10f, DesignSystem.Violet)
+                            ComponentMarksBar("Mid-2 Exams", item.mid2, 10f, DesignSystem.Violet)
                             Spacer(Modifier.height(8.dp))
-                            ComponentMarksBar("Assignments", item.assignment ?: 0f, 5f, DesignSystem.Success)
+                            ComponentMarksBar("Assignments", item.assignment, 5f, DesignSystem.Success)
                             Spacer(Modifier.height(8.dp))
-                            ComponentMarksBar("Attendance score", item.attendance ?: 0f, 5f, DesignSystem.Warning)
+                            ComponentMarksBar("Attendance score", item.attendance, 5f, DesignSystem.Warning)
                         }
                     }
+                }
             }
-        }
         }
 
         // Total marks summary
@@ -1328,20 +1343,21 @@ fun ScreenStudentMarks(
 }
 
 @Composable
-fun ComponentMarksBar(name: String, obtained: Float, max: Float, color: Color) {
+fun ComponentMarksBar(name: String, obtained: Float?, max: Float, color: Color) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(name, color = DesignSystem.TextSecondary, fontSize = 11.sp)
-            Text("$obtained / $max", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            val scoreText = if (obtained != null) "$obtained / $max" else "- / $max"
+            Text(scoreText, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.height(4.dp))
         LinearProgressIndicator(
-            progress = { obtained / max },
+            progress = { if (obtained != null) (obtained / max) else 0.0f },
             modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-            color = color,
+            color = if (obtained != null) color else Color.Gray.copy(alpha = 0.3f),
             trackColor = DesignSystem.Border
         )
     }
@@ -1550,6 +1566,7 @@ fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
 @Composable
 fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     val ticket by vm.studentHallTicket.collectAsState()
+    val errorMsg by vm.hallTicketError.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -1594,7 +1611,31 @@ fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
             Text("Examination Hall Ticket", color = Color.White, fontWeight = FontWeight.Bold)
         },
         text = {
-            if (ticket == null) {
+            if (errorMsg != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(DesignSystem.Danger.copy(alpha = 0.1f))
+                        .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Danger.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Warning, null, tint = DesignSystem.Danger, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = errorMsg!!,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            } else if (ticket == null) {
                 Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = DesignSystem.Cyan)
                 }
@@ -1856,6 +1897,78 @@ fun FeePaymentDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                                     Text("₹${log.amount}", color = DesignSystem.Success, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     Text(log.status, color = DesignSystem.Success, fontSize = 8.sp, fontWeight = FontWeight.Black)
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = DesignSystem.Surface,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+fun NotificationsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
+    val notifications by vm.studentNotifications.collectAsState()
+
+    LaunchedEffect(Unit) {
+        vm.loadStudentNotifications()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = DesignSystem.Cyan)
+            }
+        },
+        title = {
+            Text("Notification History Log", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            if (notifications.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                    Text("No notifications received yet.", color = DesignSystem.TextMuted, fontSize = 12.sp)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(notifications) { notif ->
+                        val icon = when (notif.notification_type.lowercase()) {
+                            "email" -> Icons.Default.Email
+                            "sms" -> Icons.Default.Sms
+                            else -> Icons.Default.Message
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DesignSystem.CardBg)
+                                .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border), RoundedCornerShape(8.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(icon, null, tint = DesignSystem.Cyan, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(notif.trigger_event, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text(
+                                        text = notif.sent_at.substringBefore("T"),
+                                        color = DesignSystem.TextMuted,
+                                        fontSize = 9.sp
+                                    )
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Text(notif.message_content, color = DesignSystem.TextSecondary, fontSize = 11.sp)
                             }
                         }
                     }
