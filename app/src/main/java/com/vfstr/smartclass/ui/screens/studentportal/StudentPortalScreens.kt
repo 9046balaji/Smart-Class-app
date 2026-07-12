@@ -197,31 +197,73 @@ fun ScreenStudentOverview(
         HorizontalDivider(color = DesignSystem.Border)
         
         // Quick Action Shortcuts
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Button(
-                onClick = onNavigateToLeave,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+        var showHallTicketDialog by remember { mutableStateOf(false) }
+        var showFeeDialog by remember { mutableStateOf(false) }
+        
+        if (showHallTicketDialog) {
+            HallTicketDialog(vm) { showHallTicketDialog = false }
+        }
+        if (showFeeDialog) {
+            FeePaymentDialog(vm) { showFeeDialog = false }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = DesignSystem.Cyan)
-                Spacer(Modifier.width(8.dp))
-                Text("Request OD/Leave", color = Color.White, fontSize = 12.sp)
+                Button(
+                    onClick = onNavigateToLeave,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = DesignSystem.Cyan)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Request OD/Leave", color = Color.White, fontSize = 11.sp)
+                }
+                Button(
+                    onClick = onNavigateToMOOCs,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+                ) {
+                    Icon(Icons.Default.Verified, contentDescription = null, tint = DesignSystem.Violet)
+                    Spacer(Modifier.width(8.dp))
+                    Text("MOOC Certs", color = Color.White, fontSize = 11.sp)
+                }
             }
-            Button(
-                onClick = onNavigateToMOOCs,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+            
+            val isEligibleForExam = eligibility?.let { it.overall_percentage >= 65.0 } ?: true
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Verified, contentDescription = null, tint = DesignSystem.Violet)
-                Spacer(Modifier.width(8.dp))
-                Text("MOOC Certs", color = Color.White, fontSize = 12.sp)
+                Button(
+                    onClick = { showHallTicketDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isEligibleForExam) DesignSystem.Border else DesignSystem.Danger.copy(alpha = 0.5f)),
+                    enabled = isEligibleForExam
+                ) {
+                    Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = if (isEligibleForExam) DesignSystem.Success else DesignSystem.Danger)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isEligibleForExam) "Hall Ticket" else "Ticket Barred", color = if (isEligibleForExam) Color.White else DesignSystem.Danger, fontSize = 11.sp)
+                }
+                Button(
+                    onClick = { showFeeDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.CardBg),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border)
+                ) {
+                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = DesignSystem.Cyan)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Fees & Ledger", color = Color.White, fontSize = 11.sp)
+                }
             }
         }
 
@@ -237,6 +279,53 @@ fun ScreenStudentOverview(
                     time = event.timestamp.substringBefore("T") + " " + event.timestamp.substringAfter("T").take(5),
                     isPresent = event.status.name.uppercase() == "PRESENT"
                 )
+            }
+        }
+
+        HorizontalDivider(color = DesignSystem.Border)
+
+        // Announcements Board
+        Text("Announcements & Circulars Board", color = Color.White, fontWeight = FontWeight.Bold)
+        val circulars by vm.studentCirculars.collectAsState()
+        
+        LaunchedEffect(Unit) {
+            vm.loadStudentCirculars()
+        }
+
+        if (circulars.isEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.Center) {
+                Text("No recent announcements available", color = DesignSystem.TextMuted, fontSize = 12.sp)
+            }
+        } else {
+            circulars.forEach { circ ->
+                GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val badgeColor = when (circ.category.lowercase()) {
+                                "exams" -> DesignSystem.Danger
+                                "placements" -> DesignSystem.Success
+                                else -> DesignSystem.Cyan
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(badgeColor.copy(alpha = 0.1f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(circ.category.uppercase(), color = badgeColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
+                            Text(circ.publish_date, color = DesignSystem.TextMuted, fontSize = 10.sp)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(circ.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(circ.description, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                    }
+                }
             }
         }
     }
@@ -1313,6 +1402,250 @@ fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                                 Spacer(Modifier.height(4.dp))
                                 Text("Code: ${item.subject_code} • Failed: ${item.semester_failed}", color = DesignSystem.TextSecondary, fontSize = 10.sp)
                                 Text("Re-exam: ${item.next_exam_window} • Attempts: ${item.attempts}", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = DesignSystem.Surface,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
+    val ticket by vm.studentHallTicket.collectAsState()
+
+    LaunchedEffect(Unit) {
+        vm.loadStudentHallTicket()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = DesignSystem.Cyan)
+            }
+        },
+        title = {
+            Text("Examination Hall Ticket", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            if (ticket == null) {
+                Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = DesignSystem.Cyan)
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.Cyan.copy(alpha = 0.05f))
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Cyan.copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text("Name: ${ticket?.student_name}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Roll Number: ${ticket?.roll_no}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            Text("Session: ${ticket?.exam_session}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            Text("Center: ${ticket?.exam_center}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                        }
+                    }
+
+                    Text("Registered Exams", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+
+                    ticket?.subjects?.forEach { sub ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DesignSystem.CardBg)
+                                .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border), RoundedCornerShape(8.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(sub.subject_name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(sub.subject_code, color = DesignSystem.Cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Date: ${sub.exam_date}", color = DesignSystem.TextSecondary, fontSize = 10.sp)
+                                    Text("Time: ${sub.exam_time}", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = DesignSystem.Surface,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+fun FeePaymentDialog(vm: MainViewModel, onDismiss: () -> Unit) {
+    val fees by vm.studentFees.collectAsState()
+    val isPaying by vm.isPayingFees.collectAsState()
+    var paymentMode by remember { mutableStateOf("UPI") }
+    var payAmountStr by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        vm.loadStudentFees()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            if (fees != null && fees!!.total_due > 0f) {
+                Button(
+                    onClick = {
+                        val amount = payAmountStr.toFloatOrNull() ?: fees!!.total_due
+                        if (amount <= 0f || amount > fees!!.total_due) {
+                            android.widget.Toast.makeText(context, "Invalid payment amount", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            vm.payStudentFees(amount, paymentMode) {
+                                android.widget.Toast.makeText(context, "Payment Processed successfully", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Cyan),
+                    enabled = !isPaying
+                ) {
+                    if (isPaying) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black)
+                    } else {
+                        Text("Pay Dues", color = Color.Black)
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", color = DesignSystem.TextSecondary)
+            }
+        },
+        title = {
+            Text("Fees & Payment Ledger", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            if (fees == null) {
+                Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = DesignSystem.Cyan)
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.CardBg)
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Tuition Fee Due", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                                Text("₹${fees?.tuition_fee}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Examination Fee Due", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                                Text("₹${fees?.exam_fee}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Registration & Other", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                                Text("₹${fees?.other_fee}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Paid Aggregate", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                                Text("₹${fees?.paid_amount}", color = DesignSystem.Success, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            HorizontalDivider(color = DesignSystem.Border)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Net Outstanding Balance", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("₹${fees?.total_due}", color = DesignSystem.Danger, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+
+                    if (fees!!.total_due > 0f) {
+                        Text("Payment Setup", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        
+                        OutlinedTextField(
+                            value = payAmountStr,
+                            onValueChange = { payAmountStr = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = DesignSystem.Cyan,
+                                unfocusedBorderColor = DesignSystem.Border,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            placeholder = { Text("Enter payment amount (Default: Net)", color = DesignSystem.TextMuted, fontSize = 11.sp) }
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("UPI", "Credit Card", "Net Banking").forEach { mode ->
+                                val isSelected = paymentMode == mode
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) DesignSystem.Cyan.copy(alpha = 0.15f) else Color.Transparent)
+                                        .border(androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) DesignSystem.Cyan else DesignSystem.Border), RoundedCornerShape(8.dp))
+                                        .clickable { paymentMode = mode }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(mode, color = if (isSelected) DesignSystem.Cyan else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    Text("Historical Receipts", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+
+                    fees?.payment_history?.forEach { log ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DesignSystem.CardBg)
+                                .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border), RoundedCornerShape(8.dp))
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(log.receipt_no, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Mode: ${log.payment_mode} • Date: ${log.payment_date}", color = DesignSystem.TextSecondary, fontSize = 9.sp)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("₹${log.amount}", color = DesignSystem.Success, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(log.status, color = DesignSystem.Success, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                }
                             }
                         }
                     }
