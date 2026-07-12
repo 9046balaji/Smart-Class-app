@@ -28,9 +28,11 @@ import com.vfstr.smartclass.ui.theme.DesignSystem
 enum class PortalSection(val label: String, val icon: ImageVector) {
     OVERVIEW("Dashboard", Icons.Default.Dashboard),
     ATTENDANCE("Attendance", Icons.Default.EventNote),
-    OD_REQUESTS("Leave & OD", Icons.Default.Description),
+    MARKS("Marks", Icons.Default.Assessment),
     CERTIFICATES("MOOCs", Icons.Default.Verified),
     ENROLLMENT("Face Sync", Icons.Default.PersonAdd),
+    OD_REQUESTS("Leave & OD", Icons.Default.Description),
+    RESULTS("Academic Results", Icons.Default.Grade),
     PROFILE("Profile", Icons.Default.Person),
     SETTINGS("Settings", Icons.Default.Settings)
 }
@@ -63,12 +65,15 @@ fun StudentPortalShell(
                     PortalSection.OVERVIEW -> ScreenStudentOverview(
                         vm = vm,
                         onNavigateToMOOCs = { currentSection = PortalSection.CERTIFICATES },
-                        onNavigateToLeave = { currentSection = PortalSection.OD_REQUESTS }
+                        onNavigateToLeave = { currentSection = PortalSection.OD_REQUESTS },
+                        onNavigateToResults = { currentSection = PortalSection.RESULTS }
                     )
                     PortalSection.ATTENDANCE -> ScreenStudentAttendance(vm)
-                    PortalSection.OD_REQUESTS -> ScreenStudentOD(vm)
+                    PortalSection.MARKS -> ScreenStudentMarks(vm)
                     PortalSection.CERTIFICATES -> ScreenStudentCertificates(vm)
                     PortalSection.ENROLLMENT -> EnrollmentDispatcher(vm)
+                    PortalSection.OD_REQUESTS -> ScreenStudentOD(vm)
+                    PortalSection.RESULTS -> ScreenStudentResults(vm)
                     PortalSection.PROFILE -> ProfileScreen(vm)
                     PortalSection.SETTINGS -> SettingsScreen(vm)
                 }
@@ -152,7 +157,12 @@ fun PortalBottomNav(current: PortalSection, onSelect: (PortalSection) -> Unit) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PortalSection.entries.filter { it != PortalSection.PROFILE && it != PortalSection.SETTINGS }.forEach { section ->
+            PortalSection.entries.filter { 
+                it != PortalSection.PROFILE && 
+                it != PortalSection.SETTINGS && 
+                it != PortalSection.RESULTS && 
+                it != PortalSection.OD_REQUESTS 
+            }.forEach { section ->
                 val isSel = current == section
                 Column(
                     modifier = Modifier
