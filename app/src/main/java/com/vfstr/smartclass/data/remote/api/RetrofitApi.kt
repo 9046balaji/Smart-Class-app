@@ -374,7 +374,8 @@ data class MentorDto(
     val mentor_email: String,
     val mentor_phone: String,
     val office_hours: String,
-    val department: String
+    val department: String,
+    val designation: String = "Assistant Professor"
 )
 
 
@@ -388,6 +389,9 @@ data class HallTicketSubjectDto(
 data class HallTicketDto(
     val student_name: String,
     val roll_no: String,
+    val department: String? = null,
+    val year: String? = null,
+    val section: String? = null,
     val exam_session: String,
     val exam_center: String,
     val subjects: List<HallTicketSubjectDto>
