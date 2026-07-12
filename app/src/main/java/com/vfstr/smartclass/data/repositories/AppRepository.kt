@@ -435,6 +435,14 @@ class AppRepository @Inject constructor(
         }
     }
 
+    suspend fun getStudentProfile(): ProfileResponse {
+        return try {
+            api.getStudentProfile()
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
     suspend fun getLatestVersion(): AppVersionDto {
         return try {
             api.getLatestVersion()
@@ -456,4 +464,63 @@ class AppRepository @Inject constructor(
             e.printStackTrace()
         }
     }
+
+    suspend fun getStudentAttendance(): List<StudentAttendanceDto> {
+        return try {
+            api.getStudentAttendance()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getStudentEligibility(): StudentEligibilityDto {
+        return try {
+            api.getStudentEligibility()
+        } catch (e: Exception) {
+            StudentEligibilityDto(0.0, "barred", emptyList())
+        }
+    }
+
+    suspend fun getStudentODRequests(): List<ODRequestDto> {
+        return try {
+            api.getStudentODRequests()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun submitStudentODRequest(eventName: String, eventDate: String, duration: Int, reason: String): Boolean {
+        return try {
+            api.submitStudentODRequest(StudentODRequestPayload(eventName, eventDate, duration, reason))
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun getStudentMOOCs(): List<MOOCEnrollmentDto> {
+        return try {
+            api.getStudentMOOCs()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun enrollStudentMOOC(payload: StudentMOOCEnrollPayload): MOOCEnrollmentDto? {
+        return try {
+            api.enrollStudentMOOC(payload)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun changeStudentPassword(current: String, new: String): Boolean {
+        return try {
+            api.changeStudentPassword(mapOf("current_password" to current, "new_password" to new))
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
+
