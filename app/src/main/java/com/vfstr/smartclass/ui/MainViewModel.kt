@@ -26,6 +26,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import retrofit2.HttpException
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -116,6 +117,8 @@ class MainViewModel @Inject constructor(
     val studentFees = MutableStateFlow<FeePaymentDto?>(null)
     val studentCirculars = MutableStateFlow<List<CircularDto>>(emptyList())
     val isPayingFees = MutableStateFlow<Boolean>(false)
+    val studentNotifications = MutableStateFlow<List<com.vfstr.smartclass.data.remote.api.StudentNotificationDto>>(emptyList())
+    val hallTicketError = MutableStateFlow<String?>(null)
     val isSubmittingOD = MutableStateFlow(false)
     val isEnrollingMOOC = MutableStateFlow(false)
     val isPasswordChanging = MutableStateFlow(false)
@@ -901,9 +904,24 @@ class MainViewModel @Inject constructor(
 
     fun loadStudentHallTicket() {
         viewModelScope.launch {
+            hallTicketError.value = null
+            studentHallTicket.value = null
             try {
                 studentHallTicket.value = repository.getStudentHallTicket()
+            } catch (e: HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                val msg = try {
+                    if (errorBody != null) {
+                        org.json.JSONObject(errorBody).getString("detail")
+                    } else {
+                        "Failed to load hall ticket"
+                    }
+                } catch (ex: Exception) {
+                    errorBody ?: "Failed to load hall ticket"
+                }
+                hallTicketError.value = msg
             } catch (e: Exception) {
+                hallTicketError.value = e.message ?: "Failed to load hall ticket"
                 e.printStackTrace()
             }
         }
@@ -940,6 +958,16 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 studentCirculars.value = repository.getStudentCirculars()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentNotifications() {
+        viewModelScope.launch {
+            try {
+                studentNotifications.value = repository.getStudentNotifications()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
