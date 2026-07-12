@@ -769,4 +769,15 @@ interface RetrofitApi {
 
     @POST("student/attendance/check-in")
     suspend fun submitBleCheckIn(@Body req: BleCheckInRequest): AttendanceScanResult
+
+    @GET("student/notifications")
+    suspend fun getStudentNotifications(): List<StudentNotificationDto>
 }
+
+data class StudentNotificationDto(
+    val id: Int,
+    val trigger_event: String,
+    val message_content: String,
+    val sent_at: String,
+    val notification_type: String
+)
