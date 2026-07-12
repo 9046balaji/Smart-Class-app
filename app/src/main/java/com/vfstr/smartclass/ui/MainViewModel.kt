@@ -112,6 +112,10 @@ class MainViewModel @Inject constructor(
     val selectedMarksSemester = MutableStateFlow<String>("SEM-5")
     val studentBacklogs = MutableStateFlow<BacklogsSummaryDto?>(null)
     val studentMentor = MutableStateFlow<MentorDto?>(null)
+    val studentHallTicket = MutableStateFlow<HallTicketDto?>(null)
+    val studentFees = MutableStateFlow<FeePaymentDto?>(null)
+    val studentCirculars = MutableStateFlow<List<CircularDto>>(emptyList())
+    val isPayingFees = MutableStateFlow<Boolean>(false)
     val isSubmittingOD = MutableStateFlow(false)
     val isEnrollingMOOC = MutableStateFlow(false)
     val isPasswordChanging = MutableStateFlow(false)
@@ -638,6 +642,9 @@ class MainViewModel @Inject constructor(
                 loadSemesterResults()
                 loadStudentBacklogs()
                 loadStudentMentor()
+                loadStudentHallTicket()
+                loadStudentFees()
+                loadStudentCirculars()
             } else {
                 loadDashboardStats()
                 loadStudents()
@@ -886,6 +893,53 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 studentMentor.value = repository.getStudentMentor()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentHallTicket() {
+        viewModelScope.launch {
+            try {
+                studentHallTicket.value = repository.getStudentHallTicket()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentFees() {
+        viewModelScope.launch {
+            try {
+                studentFees.value = repository.getStudentFees()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun payStudentFees(amount: Float, mode: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            isPayingFees.value = true
+            try {
+                val success = repository.payStudentFees(amount, mode)
+                if (success) {
+                    loadStudentFees()
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isPayingFees.value = false
+            }
+        }
+    }
+
+    fun loadStudentCirculars() {
+        viewModelScope.launch {
+            try {
+                studentCirculars.value = repository.getStudentCirculars()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
