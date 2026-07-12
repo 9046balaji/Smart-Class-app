@@ -274,9 +274,42 @@ fun ScreenStudentAttendance(
     modifier: Modifier = Modifier
 ) {
     val eligibility by vm.studentEligibility.collectAsState()
+    val reportLogs by vm.studentAttendanceReport.collectAsState()
+    val filterFrom by vm.attendanceFilterFrom.collectAsState()
+    val filterTo by vm.attendanceFilterTo.collectAsState()
+    val context = LocalContext.current
+
+    val calendar = Calendar.getInstance()
+    
+    val fromDatePicker = DatePickerDialog(
+        context,
+        { _, y, m, d ->
+            val dateStr = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d)
+            vm.attendanceFilterFrom.value = dateStr
+            vm.loadStudentEligibility(dateStr, vm.attendanceFilterTo.value)
+            vm.loadStudentAttendanceReport(dateStr, vm.attendanceFilterTo.value)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    val toDatePicker = DatePickerDialog(
+        context,
+        { _, y, m, d ->
+            val dateStr = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d)
+            vm.attendanceFilterTo.value = dateStr
+            vm.loadStudentEligibility(vm.attendanceFilterFrom.value, dateStr)
+            vm.loadStudentAttendanceReport(vm.attendanceFilterFrom.value, dateStr)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
     
     LaunchedEffect(Unit) {
-        vm.loadStudentEligibility()
+        vm.loadStudentEligibility(vm.attendanceFilterFrom.value, vm.attendanceFilterTo.value)
+        vm.loadStudentAttendanceReport(vm.attendanceFilterFrom.value, vm.attendanceFilterTo.value)
     }
 
     Column(
@@ -287,6 +320,77 @@ fun ScreenStudentAttendance(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Attendance Ledger", style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
+
+        // Date range query filters card
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Date-Range Query Filter", color = DesignSystem.Cyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // From Date Selector
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.CardBg)
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border))
+                            .clickable { fromDatePicker.show() }
+                            .padding(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarToday, null, tint = DesignSystem.Cyan, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text("From Date", color = DesignSystem.TextMuted, fontSize = 9.sp)
+                                Text(filterFrom ?: "Select", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    // To Date Selector
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.CardBg)
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border))
+                            .clickable { toDatePicker.show() }
+                            .padding(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarToday, null, tint = DesignSystem.Cyan, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text("To Date", color = DesignSystem.TextMuted, fontSize = 9.sp)
+                                Text(filterTo ?: "Select", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                if (filterFrom != null || filterTo != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Reset Filters",
+                        color = DesignSystem.Danger,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable {
+                                vm.attendanceFilterFrom.value = null
+                                vm.attendanceFilterTo.value = null
+                                vm.loadStudentEligibility(null, null)
+                                vm.loadStudentAttendanceReport(null, null)
+                            }
+                            .align(Alignment.End)
+                            .padding(4.dp)
+                    )
+                }
+            }
+        }
 
         // Heatmap Matrix
         GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
@@ -366,6 +470,59 @@ fun ScreenStudentAttendance(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Text("Chronological Attendance Logs", color = Color.White, fontWeight = FontWeight.Bold)
+
+        if (reportLogs.isEmpty()) {
+            EmptyStatePlaceholder(msg = "No attendance logs found for this date range.")
+        } else {
+            reportLogs.forEach { log ->
+                val isPresent = log.status.lowercase() in listOf("present", "late", "od_present")
+                GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (isPresent) DesignSystem.Success.copy(alpha = 0.1f) else DesignSystem.Danger.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isPresent) Icons.Default.Check else Icons.Default.Close,
+                                contentDescription = null,
+                                tint = if (isPresent) DesignSystem.Success else DesignSystem.Danger,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(log.subject_name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Time: " + log.start_time.substringBefore("T") + " " + log.start_time.substringAfter("T").take(5),
+                                color = DesignSystem.TextMuted,
+                                fontSize = 10.sp
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(DesignSystem.CardBg)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = log.marked_via.uppercase(),
+                                color = DesignSystem.Cyan,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
