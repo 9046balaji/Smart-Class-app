@@ -48,6 +48,7 @@ fun ScreenStudentOverview(
     vm: MainViewModel,
     onNavigateToMOOCs: () -> Unit,
     onNavigateToLeave: () -> Unit,
+    onNavigateToResults: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -95,7 +96,12 @@ fun ScreenStudentOverview(
 
         // Snapshot Stats
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            GlassmorphicCard(modifier = Modifier.weight(1f).height(100.dp)) {
+            GlassmorphicCard(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(100.dp)
+                    .clickable { onNavigateToResults() }
+            ) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Current CGPA", color = DesignSystem.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
@@ -1009,6 +1015,214 @@ class MoocViewModel @javax.inject.Inject constructor(
                 e.printStackTrace()
             } finally {
                 _isEnrolling.value = false
+            }
+        }
+    }
+}
+
+@Composable
+fun ScreenStudentMarks(
+    vm: MainViewModel,
+    modifier: Modifier = Modifier
+) {
+    val marks by vm.studentMarks.collectAsState()
+    val selectedSemester by vm.selectedMarksSemester.collectAsState()
+
+    LaunchedEffect(selectedSemester) {
+        vm.loadStudentMarks(selectedSemester)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(DesignSystem.Padding)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Internal Marks", style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
+
+        // Semester selector tabs
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("SEM-5", "SEM-4", "SEM-3").forEach { sem ->
+                val isSelected = selectedSemester == sem
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) DesignSystem.Cyan.copy(alpha = 0.15f) else Color.Transparent)
+                        .border(androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) DesignSystem.Cyan else DesignSystem.Border), RoundedCornerShape(8.dp))
+                        .clickable { vm.selectedMarksSemester.value = sem }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(sem, color = if (isSelected) DesignSystem.Cyan else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (marks.isEmpty()) {
+            EmptyStatePlaceholder(msg = "No marks registered for this semester.")
+        } else {
+            marks.forEach { item ->
+                var expanded by remember { mutableStateOf(false) }
+                
+                GlassmorphicCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.subject_name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(item.subject_code, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "${item.total_obtained ?: 0.0f} / ${item.total_max}",
+                                    color = DesignSystem.Cyan,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Text("Click to view details", color = DesignSystem.TextMuted, fontSize = 9.sp)
+                            }
+                        }
+
+                        if (expanded) {
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider(color = DesignSystem.Border)
+                            Spacer(Modifier.height(12.dp))
+
+                            ComponentMarksBar("Mid-1 Exams", item.mid1 ?: 0f, 10f, DesignSystem.Cyan)
+                            Spacer(Modifier.height(8.dp))
+                            ComponentMarksBar("Mid-2 Exams", item.mid2 ?: 0f, 10f, DesignSystem.Violet)
+                            Spacer(Modifier.height(8.dp))
+                            ComponentMarksBar("Assignments", item.assignment ?: 0f, 5f, DesignSystem.Success)
+                            Spacer(Modifier.height(8.dp))
+                            ComponentMarksBar("Attendance score", item.attendance ?: 0f, 5f, DesignSystem.Warning)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ComponentMarksBar(name: String, obtained: Float, max: Float, color: Color) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(name, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+            Text("$obtained / $max", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { obtained / max },
+            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+            color = color,
+            trackColor = DesignSystem.Border
+        )
+    }
+}
+
+@Composable
+fun ScreenStudentResults(
+    vm: MainViewModel,
+    modifier: Modifier = Modifier
+) {
+    val results by vm.semesterResults.collectAsState()
+
+    LaunchedEffect(Unit) {
+        vm.loadSemesterResults()
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(DesignSystem.Padding)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Academic Grade Sheets", style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
+
+        if (results.isEmpty()) {
+            EmptyStatePlaceholder(msg = "Loading academic records and grade templates...")
+        } else {
+            results.forEach { res ->
+                var expanded by remember { mutableStateOf(false) }
+
+                GlassmorphicCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(res.semester, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("GPA: ${res.sgpa} • Cumulative: ${res.cgpa}", color = DesignSystem.Cyan, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(
+                                text = if (expanded) "COLLAPSE" else "EXPAND",
+                                color = DesignSystem.TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (expanded) {
+                            Spacer(Modifier.height(12.dp))
+                            HorizontalDivider(color = DesignSystem.Border)
+                            Spacer(Modifier.height(8.dp))
+
+                            res.subjects.forEach { sub ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(sub.subject_name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("${sub.subject_code} • Credits: ${sub.credits}", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                                    }
+                                    
+                                    val badgeColor = when (sub.grade.uppercase()) {
+                                        "O", "A+", "A" -> DesignSystem.Success
+                                        "B+", "B" -> DesignSystem.Cyan
+                                        "C" -> DesignSystem.Warning
+                                        else -> DesignSystem.Danger
+                                    }
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(badgeColor.copy(alpha = 0.1f))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(sub.grade, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
