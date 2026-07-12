@@ -378,6 +378,46 @@ data class MentorDto(
 )
 
 
+data class HallTicketSubjectDto(
+    val subject_code: String,
+    val subject_name: String,
+    val exam_date: String,
+    val exam_time: String
+)
+
+data class HallTicketDto(
+    val student_name: String,
+    val roll_no: String,
+    val exam_session: String,
+    val exam_center: String,
+    val subjects: List<HallTicketSubjectDto>
+)
+
+data class FeeLedgerDto(
+    val receipt_no: String,
+    val payment_date: String,
+    val amount: Float,
+    val payment_mode: String,
+    val status: String
+)
+
+data class FeePaymentDto(
+    val tuition_fee: Float,
+    val exam_fee: Float,
+    val other_fee: Float,
+    val paid_amount: Float,
+    val total_due: Float,
+    val payment_history: List<FeeLedgerDto>
+)
+
+data class CircularDto(
+    val title: String,
+    val description: String,
+    val publish_date: String,
+    val category: String
+)
+
+
 data class PlatformStatsDto(
     val enrolled: Int,
     val completed: Int,
@@ -710,6 +750,18 @@ interface RetrofitApi {
 
     @GET("student/mentor")
     suspend fun getStudentMentor(): MentorDto
+
+    @GET("student/hall-ticket")
+    suspend fun getStudentHallTicket(): HallTicketDto
+
+    @GET("student/fees")
+    suspend fun getStudentFees(): FeePaymentDto
+
+    @POST("student/fees/pay")
+    suspend fun payStudentFees(@Body body: Map<String, @JvmSuppressWildcards Any>): Map<String, Any>
+
+    @GET("student/circulars")
+    suspend fun getStudentCirculars(): List<CircularDto>
 
     @POST("student/attendance/check-in")
     suspend fun submitBleCheckIn(@Body req: BleCheckInRequest): AttendanceScanResult
