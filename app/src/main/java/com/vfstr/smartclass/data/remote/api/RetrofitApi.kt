@@ -318,6 +318,16 @@ data class MOOCEnrollmentDto(
     val enrolled_at: String? = null
 )
 
+data class StudentAttendanceRecordDto(
+    val id: String,
+    val start_time: String,
+    val subject_name: String,
+    val status: String,
+    val marked_via: String,
+    val marked_at: String? = null
+)
+
+
 data class PlatformStatsDto(
     val enrolled: Int,
     val completed: Int,
@@ -605,10 +615,16 @@ interface RetrofitApi {
 
     // Student Portal Specific
     @GET("student/attendance")
-    suspend fun getStudentAttendance(): List<StudentAttendanceDto>
+    suspend fun getStudentAttendance(
+        @Query("from_date") fromDate: String? = null,
+        @Query("to_date") toDate: String? = null
+    ): List<StudentAttendanceDto>
 
     @GET("student/attendance/report")
-    suspend fun getStudentAttendanceReport(): List<StudentAttendanceDto>
+    suspend fun getStudentAttendanceReport(
+        @Query("from_date") fromDate: String? = null,
+        @Query("to_date") toDate: String? = null
+    ): List<StudentAttendanceRecordDto>
 
     @GET("student/od-requests")
     suspend fun getStudentODRequests(): List<ODRequestDto>
@@ -617,7 +633,10 @@ interface RetrofitApi {
     suspend fun submitStudentODRequest(@Body body: StudentODRequestPayload): Map<String, Any>
 
     @GET("student/eligibility")
-    suspend fun getStudentEligibility(): StudentEligibilityDto
+    suspend fun getStudentEligibility(
+        @Query("from_date") fromDate: String? = null,
+        @Query("to_date") toDate: String? = null
+    ): StudentEligibilityDto
 
     @GET("student/mooc")
     suspend fun getStudentMOOCs(): List<MOOCEnrollmentDto>
