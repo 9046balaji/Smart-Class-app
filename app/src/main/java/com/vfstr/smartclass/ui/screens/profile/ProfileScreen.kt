@@ -2,6 +2,7 @@ package com.vfstr.smartclass.ui.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -385,6 +386,7 @@ fun StudentInteractiveCards(
 @Composable
 fun MentorDetailsSection(mentor: com.vfstr.smartclass.data.remote.api.MentorDto?) {
     if (mentor == null) return
+    val context = androidx.compose.ui.platform.LocalContext.current
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "ACADEMIC ADVISOR & COUNSELOR",
@@ -410,6 +412,7 @@ fun MentorDetailsSection(mentor: com.vfstr.smartclass.data.remote.api.MentorDto?
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(mentor.mentor_name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(mentor.designation, color = DesignSystem.Cyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         Text(mentor.department, color = DesignSystem.TextSecondary, fontSize = 11.sp)
                     }
                 }
@@ -427,6 +430,12 @@ fun MentorDetailsSection(mentor: com.vfstr.smartclass.data.remote.api.MentorDto?
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
                             .background(DesignSystem.CardBg)
+                            .clickable {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("mailto:${mentor.mentor_email}")
+                                }
+                                context.startActivity(intent)
+                            }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -440,6 +449,12 @@ fun MentorDetailsSection(mentor: com.vfstr.smartclass.data.remote.api.MentorDto?
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
                             .background(DesignSystem.CardBg)
+                            .clickable {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                    data = android.net.Uri.parse("tel:${mentor.mentor_phone}")
+                                }
+                                context.startActivity(intent)
+                            }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
