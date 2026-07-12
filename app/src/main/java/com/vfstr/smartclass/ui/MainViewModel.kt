@@ -107,6 +107,9 @@ class MainViewModel @Inject constructor(
     val attendanceFilterTo = MutableStateFlow<String?>(null)
     val studentODRequests = MutableStateFlow<List<ODRequestDto>>(emptyList())
     val studentMOOCEnrollments = MutableStateFlow<List<MOOCEnrollmentDto>>(emptyList())
+    val studentMarks = MutableStateFlow<List<StudentMarksDto>>(emptyList())
+    val semesterResults = MutableStateFlow<List<SemesterResultDto>>(emptyList())
+    val selectedMarksSemester = MutableStateFlow<String>("SEM-5")
     val isSubmittingOD = MutableStateFlow(false)
     val isEnrollingMOOC = MutableStateFlow(false)
     val isPasswordChanging = MutableStateFlow(false)
@@ -629,6 +632,8 @@ class MainViewModel @Inject constructor(
                 loadStudentAttendanceReport(attendanceFilterFrom.value, attendanceFilterTo.value)
                 loadStudentODRequests()
                 loadStudentMOOCs()
+                loadStudentMarks(selectedMarksSemester.value)
+                loadSemesterResults()
             } else {
                 loadDashboardStats()
                 loadStudents()
@@ -832,6 +837,31 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 studentAttendanceReport.value = repository.getStudentAttendanceReport(fromDate, toDate)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentMarks(semester: String? = null) {
+        viewModelScope.launch {
+            try {
+                studentMarks.value = repository.getStudentMarks(semester)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadSemesterResults() {
+        viewModelScope.launch {
+            try {
+                val results = repository.getStudentResults()
+                semesterResults.value = results
+                val latest = results.maxByOrNull { it.semester }
+                if (latest != null) {
+                    cgpaAnimated.value = latest.cgpa.toDouble()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
