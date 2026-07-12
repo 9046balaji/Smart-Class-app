@@ -35,9 +35,13 @@ fun ProfileScreen(vm: MainViewModel) {
     val localCgpa by vm.localCgpa.collectAsState()
     val localLastYearSubjects by vm.localLastYearSubjects.collectAsState()
     val activeRoleContext by vm.activeRoleContext.collectAsState()
+    val studentMentor by vm.studentMentor.collectAsState()
 
     LaunchedEffect(Unit) {
         vm.loadProfile()
+        if (vm.currentRole.value == UserRole.student) {
+            vm.loadStudentMentor()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -59,6 +63,9 @@ fun ProfileScreen(vm: MainViewModel) {
             if (currentRole == UserRole.student) {
                 item {
                     StudentDetailsSection(studentProfile)
+                }
+                item {
+                    MentorDetailsSection(studentMentor)
                 }
                 item {
                     StudentInteractiveCards(
@@ -369,6 +376,85 @@ fun StudentInteractiveCards(
                         unfocusedIndicatorColor = DesignSystem.Border
                     ),
                     placeholder = { Text("List subjects (e.g. AI, ML, OS)", color = DesignSystem.TextMuted) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MentorDetailsSection(mentor: com.vfstr.smartclass.data.remote.api.MentorDto?) {
+    if (mentor == null) return
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "ACADEMIC ADVISOR & COUNSELOR",
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = DesignSystem.Cyan,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            ),
+            modifier = Modifier.padding(bottom = DesignSystem.SpacingSmall)
+        )
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(DesignSystem.Cyan.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.School, null, tint = DesignSystem.Cyan, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(mentor.mentor_name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(mentor.department, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = DesignSystem.Border)
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.CardBg)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Email, null, tint = DesignSystem.Cyan, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(mentor.mentor_email, color = Color.White, fontSize = 10.sp, maxLines = 1)
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DesignSystem.CardBg)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Phone, null, tint = DesignSystem.Cyan, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(mentor.mentor_phone, color = Color.White, fontSize = 10.sp, maxLines = 1)
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Office Hours: " + mentor.office_hours,
+                    color = DesignSystem.TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
