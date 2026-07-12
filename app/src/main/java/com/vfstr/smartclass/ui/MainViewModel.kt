@@ -11,7 +11,7 @@ import com.vfstr.smartclass.data.local.db.*
 import com.vfstr.smartclass.data.preferences.AppPreferencesRepository
 import com.vfstr.smartclass.data.preferences.SecurePreferences
 import com.vfstr.smartclass.data.repositories.AppRepository
-import com.vfstr.smartclass.data.remote.api.CreateSessionPayload
+import com.vfstr.smartclass.data.remote.api.*
 import com.vfstr.smartclass.domain.models.*
 import com.vfstr.smartclass.ui.navigation.Navigation
 import com.vfstr.smartclass.utils.geofence.LocationHelper
@@ -99,6 +99,17 @@ class MainViewModel @Inject constructor(
     // Student Portal States (RULE 12 / 21)
     val studentProfile = MutableStateFlow<Student?>(null)
     val cgpaAnimated = MutableStateFlow(0.0)
+    
+    // Student Portal Expanded States
+    val studentEligibility = MutableStateFlow<StudentEligibilityDto?>(null)
+    val studentODRequests = MutableStateFlow<List<ODRequestDto>>(emptyList())
+    val studentMOOCEnrollments = MutableStateFlow<List<MOOCEnrollmentDto>>(emptyList())
+    val isSubmittingOD = MutableStateFlow(false)
+    val isEnrollingMOOC = MutableStateFlow(false)
+    val isPasswordChanging = MutableStateFlow(false)
+    val passwordChangeSuccess = MutableStateFlow<Boolean?>(null)
+    val odSubmitSuccess = MutableStateFlow<Boolean?>(null)
+    val moocEnrollSuccess = MutableStateFlow<Boolean?>(null)
     
     // Profile & Settings States
     val staffProfile = MutableStateFlow<User?>(null)
@@ -452,10 +463,36 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (currentRole.value == UserRole.student) {
-                    // Already loaded in loginStudent or can be refreshed
-                    val sList = repository.getStudents(emptyMap())
-                    val roll = securePrefs.getUserName() // Assuming username is rollNo for students
-                    studentProfile.value = sList.find { it.rollNo.uppercase() == roll.uppercase() }
+                    try {
+                        val p = repository.getStudentProfile()
+                        val sList = repository.getStudents(emptyMap())
+                        val matched = sList.find { it.rollNo.uppercase() == p.username.uppercase() }
+                        if (matched != null) {
+                            studentProfile.value = matched.copy(
+                                email = p.email ?: matched.email,
+                                department = p.department ?: matched.department,
+                                year = p.year?.toString() ?: matched.year,
+                                section = p.section ?: matched.section
+                            )
+                        } else {
+                            studentProfile.value = Student(
+                                id = p.id,
+                                studentId = p.student_id,
+                                name = p.name ?: p.full_name ?: "",
+                                rollNo = p.username,
+                                department = p.department ?: "",
+                                year = p.year?.toString() ?: "1",
+                                section = p.section ?: "A",
+                                email = p.email,
+                                faceEnrolled = false,
+                                biometricConsent = false
+                            )
+                        }
+                    } catch (e: Exception) {
+                        val sList = repository.getStudents(emptyMap())
+                        val roll = securePrefs.getUserName()
+                        studentProfile.value = sList.find { it.rollNo.uppercase() == roll.uppercase() }
+                    }
                 } else {
                     // Fetch staff profile
                     val profileDto = repository.getStaffProfile()
@@ -583,14 +620,21 @@ class MainViewModel @Inject constructor(
 
     fun refreshAllData() {
         viewModelScope.launch {
-            loadDashboardStats()
-            loadStudents()
-            loadAttendanceEvents()
-            loadSessions()
-            loadTimetable()
-            loadODRequests()
-            loadAuditLogs()
-            loadNotificationLogs()
+            if (currentRole.value == UserRole.student) {
+                loadProfile()
+                loadStudentEligibility()
+                loadStudentODRequests()
+                loadStudentMOOCs()
+            } else {
+                loadDashboardStats()
+                loadStudents()
+                loadAttendanceEvents()
+                loadSessions()
+                loadTimetable()
+                loadODRequests()
+                loadAuditLogs()
+                loadNotificationLogs()
+            }
         }
     }
 
@@ -766,10 +810,103 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun loadStudentEligibility() {
+        viewModelScope.launch {
+            try {
+                val data = repository.getStudentEligibility()
+                studentEligibility.value = data
+                cgpaAnimated.value = studentProfile.value?.cgpa ?: (data.overall_percentage / 10.0)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentODRequests() {
+        viewModelScope.launch {
+            try {
+                studentODRequests.value = repository.getStudentODRequests()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentMOOCs() {
+        viewModelScope.launch {
+            try {
+                studentMOOCEnrollments.value = repository.getStudentMOOCs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun submitStudentODRequest(type: String, name: String, dates: String, reason: String) {
         viewModelScope.launch {
-            // Mock success
-            refreshAllData()
+            isSubmittingOD.value = true
+            odSubmitSuccess.value = null
+            try {
+                val cleanDate = if (dates.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) dates else java.time.LocalDate.now().toString()
+                val success = repository.submitStudentODRequest(
+                    eventName = name,
+                    eventDate = cleanDate,
+                    duration = 1,
+                    reason = reason
+                )
+                odSubmitSuccess.value = success
+                if (success) {
+                    loadStudentODRequests()
+                }
+            } catch (e: Exception) {
+                odSubmitSuccess.value = false
+            } finally {
+                isSubmittingOD.value = false
+            }
+        }
+    }
+
+    fun enrollStudentMOOC(courseName: String, platform: String, courseCode: String?, credits: Int?, enrollmentDate: String?, semester: Int?, academicYear: String?) {
+        viewModelScope.launch {
+            isEnrollingMOOC.value = true
+            moocEnrollSuccess.value = null
+            try {
+                val payload = StudentMOOCEnrollPayload(
+                    course_name = courseName,
+                    platform = platform,
+                    course_code = courseCode,
+                    credits = credits,
+                    enrollment_date = enrollmentDate,
+                    semester = semester,
+                    academic_year = academicYear
+                )
+                val result = repository.enrollStudentMOOC(payload)
+                if (result != null) {
+                    moocEnrollSuccess.value = true
+                    loadStudentMOOCs()
+                } else {
+                    moocEnrollSuccess.value = false
+                }
+            } catch (e: Exception) {
+                moocEnrollSuccess.value = false
+            } finally {
+                isEnrollingMOOC.value = false
+            }
+        }
+    }
+
+    fun changeStudentPassword(current: String, new: String) {
+        viewModelScope.launch {
+            isPasswordChanging.value = true
+            passwordChangeSuccess.value = null
+            try {
+                val success = repository.changeStudentPassword(current, new)
+                passwordChangeSuccess.value = success
+            } catch (e: Exception) {
+                passwordChangeSuccess.value = false
+            } finally {
+                isPasswordChanging.value = false
+            }
         }
     }
 
