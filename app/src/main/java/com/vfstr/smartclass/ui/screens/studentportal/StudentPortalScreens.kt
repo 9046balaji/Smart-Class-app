@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,6 +64,8 @@ fun ScreenStudentOverview(
         }
         vm.loadStudentEligibility()
         vm.loadStudentBacklogs()
+        vm.loadSemesterResults()
+        vm.loadStudentFees()
     }
 
     Column(
@@ -83,7 +86,14 @@ fun ScreenStudentOverview(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("REGULATED STUDENT PORTAL", color = DesignSystem.Cyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                     if (isScanning) {
-                        ScanningIndicator()
+                        Column(horizontalAlignment = Alignment.End) {
+                            ScanningIndicator()
+                            Text(
+                                text = "Last: ${java.text.SimpleDateFormat("HH:mm", Locale.US).format(java.util.Date())}",
+                                color = DesignSystem.TextMuted,
+                                fontSize = 8.sp
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -185,12 +195,24 @@ fun ScreenStudentOverview(
             }
         }
 
-        // GPA Progression Trend (Incorporated from old Performance Screen)
+        // GPA Progression Trend (from actual semester results)
         Text("GPA Progression Trend", color = Color.White, fontWeight = FontWeight.Bold)
-        val gpaData = listOf(cgpa.toFloat() * 0.95f, cgpa.toFloat() * 0.98f, cgpa.toFloat())
+        val semResults by vm.semesterResults.collectAsState()
+        val gpaData = if (semResults.isNotEmpty()) {
+            semResults.sortedBy { it.semester }.map { it.sgpa }
+        } else {
+            listOf(8.2f, 8.5f, 8.4f)
+        }
+        val gpaColors = gpaData.mapIndexed { idx, _ ->
+            when (idx % 3) {
+                0 -> DesignSystem.Cyan
+                1 -> DesignSystem.Violet
+                else -> DesignSystem.Success
+            }
+        }
         AnimatedBarChart(
-            data = if (cgpa == 0.0) listOf(8.2f, 8.5f, 8.4f) else gpaData,
-            colors = listOf(DesignSystem.Cyan, DesignSystem.Violet, DesignSystem.Success),
+            data = gpaData,
+            colors = gpaColors,
             modifier = Modifier.height(140.dp)
         )
         
@@ -287,18 +309,43 @@ fun ScreenStudentOverview(
         // Announcements Board
         Text("Announcements & Circulars Board", color = Color.White, fontWeight = FontWeight.Bold)
         val circulars by vm.studentCirculars.collectAsState()
+        var selectedCircularCategory by remember { mutableStateOf("All") }
         
         LaunchedEffect(Unit) {
             vm.loadStudentCirculars()
         }
 
-        if (circulars.isEmpty()) {
+        // Category filter chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("All", "Exams", "Placements", "General").forEach { cat ->
+                val isSelected = selectedCircularCategory == cat
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) DesignSystem.Cyan.copy(alpha = 0.15f) else Color.Transparent)
+                        .border(androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) DesignSystem.Cyan else DesignSystem.Border), RoundedCornerShape(8.dp))
+                        .clickable { selectedCircularCategory = cat }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(cat, color = if (isSelected) DesignSystem.Cyan else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        val filteredCirculars = if (selectedCircularCategory == "All") circulars
+            else circulars.filter { it.category.equals(selectedCircularCategory, ignoreCase = true) }
+
+        if (filteredCirculars.isEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.Center) {
-                Text("No recent announcements available", color = DesignSystem.TextMuted, fontSize = 12.sp)
+                Text("No announcements in this category", color = DesignSystem.TextMuted, fontSize = 12.sp)
             }
         } else {
-            circulars.forEach { circ ->
-                GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            filteredCirculars.forEach { circ ->
+                var isExpanded by remember { mutableStateOf(false) }
+                GlassmorphicCard(modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded }) {
                     Column(Modifier.padding(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -323,7 +370,15 @@ fun ScreenStudentOverview(
                         Spacer(Modifier.height(8.dp))
                         Text(circ.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text(circ.description, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                        Text(
+                            circ.description,
+                            color = DesignSystem.TextSecondary,
+                            fontSize = 11.sp,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 2
+                        )
+                        if (!isExpanded && circ.description.length > 100) {
+                            Text("Read more", color = DesignSystem.Cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -512,16 +567,33 @@ fun ScreenStudentAttendance(
             }
         }
 
-        // Heatmap Matrix
+        // Heatmap Matrix (driven by real attendance data)
         GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("Activity Heatmap", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Activity Heatmap (Last 28 Days)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
-                repeat(4) {
+
+                // Build a 28-day attendance density map from report logs
+                val dayMap = remember(reportLogs) {
+                    val map = mutableMapOf<String, Int>()
+                    reportLogs.forEach { log ->
+                        val dayKey = log.start_time.substringBefore("T")
+                        val isPresent = log.status.lowercase() in listOf("present", "late", "od_present")
+                        if (isPresent) map[dayKey] = (map[dayKey] ?: 0) + 1
+                    }
+                    map
+                }
+                val maxSessions = (dayMap.values.maxOrNull() ?: 1).coerceAtLeast(1)
+
+                repeat(4) { week ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        repeat(7) { 
-                            val alpha = (3..10).random() / 10f
-                            Box(Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).background(DesignSystem.Success.copy(alpha = alpha))) 
+                        repeat(7) { day ->
+                            val idx = week * 7 + day
+                            val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -(27 - idx)) }
+                            val key = String.format(Locale.US, "%04d-%02d-%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
+                            val count = dayMap[key] ?: 0
+                            val alpha = if (count == 0) 0.08f else (0.3f + 0.7f * count.toFloat() / maxSessions)
+                            Box(Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).background(DesignSystem.Success.copy(alpha = alpha)))
                         }
                     }
                     Spacer(Modifier.height(4.dp))
@@ -1155,12 +1227,14 @@ fun ScreenStudentMarks(
     ) {
         Text("Internal Marks", style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
 
-        // Semester selector tabs
+        // Semester selector tabs (dynamic SEM-1 through SEM-8)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("SEM-5", "SEM-4", "SEM-3").forEach { sem ->
+            (8 downTo 1).map { "SEM-$it" }.forEach { sem ->
                 val isSelected = selectedSemester == sem
                 Box(
                     modifier = Modifier
@@ -1224,6 +1298,29 @@ fun ScreenStudentMarks(
                             ComponentMarksBar("Attendance score", item.attendance ?: 0f, 5f, DesignSystem.Warning)
                         }
                     }
+            }
+        }
+        }
+
+        // Total marks summary
+        if (marks.isNotEmpty()) {
+            val totalObtained = marks.sumOf { (it.total_obtained ?: 0f).toDouble() }
+            val totalMax = marks.sumOf { it.total_max.toDouble() }
+            val pct = if (totalMax > 0) (totalObtained / totalMax * 100) else 0.0
+            GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Total Internal Marks", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        text = String.format(Locale.US, "%.1f / %.0f (%.1f%%)", totalObtained, totalMax, pct),
+                        color = DesignSystem.Cyan,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
                 }
             }
         }
@@ -1273,6 +1370,27 @@ fun ScreenStudentResults(
         if (results.isEmpty()) {
             EmptyStatePlaceholder(msg = "Loading academic records and grade templates...")
         } else {
+            // Total credits earned summary
+            val totalCredits = results.flatMap { it.subjects }.sumOf { it.credits }
+            GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Total Credits Earned", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("R22 Regulation Requirement: 160 Credits", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                    }
+                    Text(
+                        text = "$totalCredits / 160",
+                        color = if (totalCredits >= 160) DesignSystem.Success else DesignSystem.Cyan,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
             results.forEach { res ->
                 var expanded by remember { mutableStateOf(false) }
 
@@ -1345,6 +1463,7 @@ fun ScreenStudentResults(
 @Composable
 fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     val summary by vm.studentBacklogs.collectAsState()
+    val activeList = summary?.active_backlogs ?: emptyList()
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1354,7 +1473,23 @@ fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
             }
         },
         title = {
-            Text("Backlog Ledger", color = Color.White, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Backlog Ledger", color = Color.White, fontWeight = FontWeight.Bold)
+                if (activeList.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(DesignSystem.Danger.copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("${activeList.size} ACTIVE", color = DesignSystem.Danger, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
         },
         text = {
             Column(
@@ -1370,7 +1505,6 @@ fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                 
                 HorizontalDivider(color = DesignSystem.Border)
 
-                val activeList = summary?.active_backlogs ?: emptyList()
                 if (activeList.isEmpty()) {
                     Text("No active backlogs. Clean academic status!", color = DesignSystem.Success, fontSize = 12.sp)
                 } else {
@@ -1416,6 +1550,7 @@ fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
 @Composable
 fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     val ticket by vm.studentHallTicket.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         vm.loadStudentHallTicket()
@@ -1424,8 +1559,35 @@ fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close", color = DesignSystem.Cyan)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (ticket != null) {
+                    TextButton(onClick = {
+                        val shareText = buildString {
+                            appendLine("HALL TICKET — ${ticket!!.exam_session}")
+                            appendLine("Name: ${ticket!!.student_name}")
+                            appendLine("Roll No: ${ticket!!.roll_no}")
+                            ticket!!.department?.let { appendLine("Dept: $it") }
+                            appendLine("Center: ${ticket!!.exam_center}")
+                            appendLine("---")
+                            ticket!!.subjects.forEach { sub ->
+                                appendLine("${sub.subject_code} — ${sub.subject_name}")
+                                appendLine("  Date: ${sub.exam_date} | Time: ${sub.exam_time}")
+                            }
+                        }
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(intent, "Share Hall Ticket"))
+                    }) {
+                        Icon(Icons.Default.Share, null, tint = DesignSystem.Cyan, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Share", color = DesignSystem.Cyan)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Close", color = DesignSystem.Cyan)
+                }
             }
         },
         title = {
@@ -1452,6 +1614,10 @@ fun HallTicketDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                         Column {
                             Text("Name: ${ticket?.student_name}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Text("Roll Number: ${ticket?.roll_no}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            ticket?.department?.let { Text("Department: $it", color = DesignSystem.TextSecondary, fontSize = 11.sp) }
+                            if (ticket?.year != null || ticket?.section != null) {
+                                Text("Year: ${ticket?.year ?: "-"} • Section: ${ticket?.section ?: "-"}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                            }
                             Text("Session: ${ticket?.exam_session}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
                             Text("Center: ${ticket?.exam_center}", color = DesignSystem.TextSecondary, fontSize = 11.sp)
                         }
@@ -1501,10 +1667,54 @@ fun FeePaymentDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     val isPaying by vm.isPayingFees.collectAsState()
     var paymentMode by remember { mutableStateOf("UPI") }
     var payAmountStr by remember { mutableStateOf("") }
+    var showConfirmation by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Validation state
+    val payAmount = payAmountStr.toFloatOrNull()
+    val totalDue = fees?.total_due ?: 0f
+    val isOverpayment = payAmount != null && payAmount > totalDue
+    val isInvalidAmount = payAmountStr.isNotEmpty() && (payAmount == null || payAmount <= 0f)
 
     LaunchedEffect(Unit) {
         vm.loadStudentFees()
+    }
+
+    // Confirmation dialog
+    if (showConfirmation) {
+        val confirmAmount = payAmount ?: totalDue
+        AlertDialog(
+            onDismissRequest = { showConfirmation = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmation = false
+                        vm.payStudentFees(confirmAmount, paymentMode) {
+                            android.widget.Toast.makeText(context, "Payment Processed successfully", android.widget.Toast.LENGTH_SHORT).show()
+                            payAmountStr = ""
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Cyan)
+                ) {
+                    Text("Confirm Payment", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmation = false }) {
+                    Text("Cancel", color = DesignSystem.TextMuted)
+                }
+            },
+            title = { Text("Confirm Payment", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Are you sure you want to pay ₹${String.format(Locale.US, "%.0f", confirmAmount)} via $paymentMode?",
+                    color = DesignSystem.TextSecondary,
+                    fontSize = 14.sp
+                )
+            },
+            containerColor = DesignSystem.Surface,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 
     AlertDialog(
@@ -1512,18 +1722,9 @@ fun FeePaymentDialog(vm: MainViewModel, onDismiss: () -> Unit) {
         confirmButton = {
             if (fees != null && fees!!.total_due > 0f) {
                 Button(
-                    onClick = {
-                        val amount = payAmountStr.toFloatOrNull() ?: fees!!.total_due
-                        if (amount <= 0f || amount > fees!!.total_due) {
-                            android.widget.Toast.makeText(context, "Invalid payment amount", android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            vm.payStudentFees(amount, paymentMode) {
-                                android.widget.Toast.makeText(context, "Payment Processed successfully", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
+                    onClick = { showConfirmation = true },
                     colors = ButtonDefaults.buttonColors(containerColor = DesignSystem.Cyan),
-                    enabled = !isPaying
+                    enabled = !isPaying && !isOverpayment && !isInvalidAmount
                 ) {
                     if (isPaying) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black)
@@ -1591,9 +1792,18 @@ fun FeePaymentDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                             value = payAmountStr,
                             onValueChange = { payAmountStr = it },
                             modifier = Modifier.fillMaxWidth(),
+                            isError = isOverpayment || isInvalidAmount,
+                            supportingText = {
+                                if (isOverpayment) {
+                                    Text("Amount exceeds outstanding balance of ₹${String.format(Locale.US, "%.0f", totalDue)}", color = DesignSystem.Danger, fontSize = 10.sp)
+                                } else if (isInvalidAmount) {
+                                    Text("Enter a valid payment amount", color = DesignSystem.Danger, fontSize = 10.sp)
+                                }
+                            },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = DesignSystem.Cyan,
                                 unfocusedBorderColor = DesignSystem.Border,
+                                errorBorderColor = DesignSystem.Danger,
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White
                             ),
