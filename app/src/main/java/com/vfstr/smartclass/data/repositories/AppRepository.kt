@@ -465,17 +465,25 @@ class AppRepository @Inject constructor(
         }
     }
 
-    suspend fun getStudentAttendance(): List<StudentAttendanceDto> {
+    suspend fun getStudentAttendance(fromDate: String? = null, toDate: String? = null): List<StudentAttendanceDto> {
         return try {
-            api.getStudentAttendance()
+            api.getStudentAttendance(fromDate, toDate)
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    suspend fun getStudentEligibility(): StudentEligibilityDto {
+    suspend fun getStudentAttendanceReport(fromDate: String? = null, toDate: String? = null): List<StudentAttendanceRecordDto> {
         return try {
-            api.getStudentEligibility()
+            api.getStudentAttendanceReport(fromDate, toDate)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getStudentEligibility(fromDate: String? = null, toDate: String? = null): StudentEligibilityDto {
+        return try {
+            api.getStudentEligibility(fromDate, toDate)
         } catch (e: Exception) {
             StudentEligibilityDto(0.0, "barred", emptyList())
         }
