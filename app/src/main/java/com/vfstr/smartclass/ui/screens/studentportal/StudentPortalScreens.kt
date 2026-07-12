@@ -62,6 +62,7 @@ fun ScreenStudentOverview(
             vm.startBleScanner()
         }
         vm.loadStudentEligibility()
+        vm.loadStudentBacklogs()
     }
 
     Column(
@@ -95,24 +96,29 @@ fun ScreenStudentOverview(
         }
 
         // Snapshot Stats
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        val backlogsSummary by vm.studentBacklogs.collectAsState()
+        val activeCount = backlogsSummary?.active_backlogs?.size ?: 0
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlassmorphicCard(
                 modifier = Modifier
                     .weight(1f)
-                    .height(100.dp)
+                    .height(90.dp)
                     .clickable { onNavigateToResults() }
             ) {
-                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Current CGPA", color = DesignSystem.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Current CGPA", color = DesignSystem.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = String.format(Locale.getDefault(), "%.2f", cgpa),
-                        style = MaterialTheme.typography.headlineMedium.copy(color = DesignSystem.Violet, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        style = MaterialTheme.typography.titleLarge.copy(color = DesignSystem.Violet, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                     )
                 }
             }
-            GlassmorphicCard(modifier = Modifier.weight(1f).height(100.dp)) {
-                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Overall Attendance", color = DesignSystem.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            GlassmorphicCard(modifier = Modifier.weight(1f).height(90.dp)) {
+                Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Attendance", color = DesignSystem.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
                     val attendanceText = eligibility?.let { String.format(Locale.getDefault(), "%.1f%%", it.overall_percentage) } ?: "N/A"
                     val attendanceColor = eligibility?.let {
                         when {
@@ -123,7 +129,26 @@ fun ScreenStudentOverview(
                     } ?: DesignSystem.Success
                     Text(
                         text = attendanceText,
-                        style = MaterialTheme.typography.headlineMedium.copy(color = attendanceColor, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        style = MaterialTheme.typography.titleLarge.copy(color = attendanceColor, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                    )
+                }
+            }
+            var showBacklogDialog by remember { mutableStateOf(false) }
+            if (showBacklogDialog) {
+                BacklogsDialog(vm) { showBacklogDialog = false }
+            }
+            GlassmorphicCard(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(90.dp)
+                    .clickable { showBacklogDialog = true }
+            ) {
+                Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Backlogs", color = DesignSystem.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = activeCount.toString(),
+                        style = MaterialTheme.typography.titleLarge.copy(color = if (activeCount > 0) DesignSystem.Danger else DesignSystem.Success, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                     )
                 }
             }
@@ -1226,4 +1251,75 @@ fun ScreenStudentResults(
             }
         }
     }
+}
+
+@Composable
+fun BacklogsDialog(vm: MainViewModel, onDismiss: () -> Unit) {
+    val summary by vm.studentBacklogs.collectAsState()
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", color = DesignSystem.Cyan)
+            }
+        },
+        title = {
+            Text("Backlog Ledger", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Cleared Backlogs Count: ${summary?.cleared_backlogs_count ?: 0}",
+                    color = DesignSystem.Success,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                HorizontalDivider(color = DesignSystem.Border)
+
+                val activeList = summary?.active_backlogs ?: emptyList()
+                if (activeList.isEmpty()) {
+                    Text("No active backlogs. Clean academic status!", color = DesignSystem.Success, fontSize = 12.sp)
+                } else {
+                    activeList.forEach { item ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DesignSystem.CardBg)
+                                .border(androidx.compose.foundation.BorderStroke(1.dp, DesignSystem.Border), RoundedCornerShape(8.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(item.subject_name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(DesignSystem.Danger.copy(alpha = 0.1f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("ACTIVE", color = DesignSystem.Danger, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text("Code: ${item.subject_code} • Failed: ${item.semester_failed}", color = DesignSystem.TextSecondary, fontSize = 10.sp)
+                                Text("Re-exam: ${item.next_exam_window} • Attempts: ${item.attempts}", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = DesignSystem.Surface,
+        shape = RoundedCornerShape(16.dp)
+    )
 }
