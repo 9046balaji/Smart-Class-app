@@ -65,7 +65,9 @@ data class ProfileResponse(
     val department: String? = null,
     val email: String? = null,
     val permissions: List<String>? = null,
-    val student_id: String? = null
+    val student_id: String? = null,
+    val year: Int? = null,
+    val section: String? = null
 )
 
 data class DashboardStatsDto(
@@ -307,12 +309,13 @@ data class MOOCEnrollmentDto(
     val year: Int? = null,
     val section: String? = null,
     val course_name: String,
-    val platform: String,
-    val credits: Int,
-    val status: String,
+    val platform: String? = null,
+    val credits: Int? = null,
+    val status: String? = null,
+    val completion_status: String? = null,
     val completion_date: String? = null,
     val certificate_url: String? = null,
-    val enrolled_at: String
+    val enrolled_at: String? = null
 )
 
 data class PlatformStatsDto(
@@ -375,6 +378,37 @@ data class AppVersionDto(
     val mandatory: Boolean,
     val download_url: String,
     val release_notes: String? = null
+)
+
+data class StudentAttendanceDto(
+    val subject_name: String,
+    val attended: Int,
+    val total: Int,
+    val percentage: Double,
+    val eligibility: String
+)
+
+data class StudentEligibilityDto(
+    val overall_percentage: Double,
+    val overall_status: String,
+    val subjects: List<StudentAttendanceDto>
+)
+
+data class StudentMOOCEnrollPayload(
+    val course_name: String,
+    val platform: String,
+    val course_code: String? = null,
+    val credits: Int? = null,
+    val enrollment_date: String? = null,
+    val semester: Int? = null,
+    val academic_year: String? = null
+)
+
+data class StudentODRequestPayload(
+    val eventName: String,
+    val eventDate: String,
+    val duration: Int,
+    val reason: String
 )
 
 interface RetrofitApi {
@@ -571,16 +605,28 @@ interface RetrofitApi {
 
     // Student Portal Specific
     @GET("student/attendance")
-    suspend fun getStudentAttendance(): List<Map<String, Any>>
+    suspend fun getStudentAttendance(): List<StudentAttendanceDto>
 
     @GET("student/attendance/report")
-    suspend fun getStudentAttendanceReport(): List<Map<String, Any>>
+    suspend fun getStudentAttendanceReport(): List<StudentAttendanceDto>
 
     @GET("student/od-requests")
     suspend fun getStudentODRequests(): List<ODRequestDto>
 
+    @POST("student/od-requests")
+    suspend fun submitStudentODRequest(@Body body: StudentODRequestPayload): Map<String, Any>
+
     @GET("student/eligibility")
-    suspend fun getStudentEligibility(): Map<String, Any>
+    suspend fun getStudentEligibility(): StudentEligibilityDto
+
+    @GET("student/mooc")
+    suspend fun getStudentMOOCs(): List<MOOCEnrollmentDto>
+
+    @POST("student/mooc/enroll")
+    suspend fun enrollStudentMOOC(@Body body: StudentMOOCEnrollPayload): MOOCEnrollmentDto
+
+    @POST("student/change-password")
+    suspend fun changeStudentPassword(@Body body: Map<String, String>): Map<String, String>
 
     @POST("student/attendance/check-in")
     suspend fun submitBleCheckIn(@Body req: BleCheckInRequest): AttendanceScanResult
