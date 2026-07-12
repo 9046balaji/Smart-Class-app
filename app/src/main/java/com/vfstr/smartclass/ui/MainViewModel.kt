@@ -110,6 +110,8 @@ class MainViewModel @Inject constructor(
     val studentMarks = MutableStateFlow<List<StudentMarksDto>>(emptyList())
     val semesterResults = MutableStateFlow<List<SemesterResultDto>>(emptyList())
     val selectedMarksSemester = MutableStateFlow<String>("SEM-5")
+    val studentBacklogs = MutableStateFlow<BacklogsSummaryDto?>(null)
+    val studentMentor = MutableStateFlow<MentorDto?>(null)
     val isSubmittingOD = MutableStateFlow(false)
     val isEnrollingMOOC = MutableStateFlow(false)
     val isPasswordChanging = MutableStateFlow(false)
@@ -634,6 +636,8 @@ class MainViewModel @Inject constructor(
                 loadStudentMOOCs()
                 loadStudentMarks(selectedMarksSemester.value)
                 loadSemesterResults()
+                loadStudentBacklogs()
+                loadStudentMentor()
             } else {
                 loadDashboardStats()
                 loadStudents()
@@ -862,6 +866,26 @@ class MainViewModel @Inject constructor(
                 if (latest != null) {
                     cgpaAnimated.value = latest.cgpa.toDouble()
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentBacklogs() {
+        viewModelScope.launch {
+            try {
+                studentBacklogs.value = repository.getStudentBacklogs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentMentor() {
+        viewModelScope.launch {
+            try {
+                studentMentor.value = repository.getStudentMentor()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
