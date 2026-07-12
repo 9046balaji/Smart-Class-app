@@ -563,12 +563,8 @@ class AppRepository @Inject constructor(
         }
     }
 
-    suspend fun getStudentHallTicket(): HallTicketDto? {
-        return try {
-            api.getStudentHallTicket()
-        } catch (e: Exception) {
-            null
-        }
+    suspend fun getStudentHallTicket(): HallTicketDto {
+        return api.getStudentHallTicket()
     }
 
     suspend fun getStudentFees(): FeePaymentDto? {
@@ -591,6 +587,14 @@ class AppRepository @Inject constructor(
     suspend fun getStudentCirculars(): List<CircularDto> {
         return try {
             api.getStudentCirculars()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getStudentNotifications(): List<com.vfstr.smartclass.data.remote.api.StudentNotificationDto> {
+        return try {
+            api.getStudentNotifications()
         } catch (e: Exception) {
             emptyList()
         }
