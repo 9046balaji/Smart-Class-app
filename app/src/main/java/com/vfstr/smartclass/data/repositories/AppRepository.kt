@@ -562,5 +562,38 @@ class AppRepository @Inject constructor(
             null
         }
     }
+
+    suspend fun getStudentHallTicket(): HallTicketDto? {
+        return try {
+            api.getStudentHallTicket()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getStudentFees(): FeePaymentDto? {
+        return try {
+            api.getStudentFees()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun payStudentFees(amount: Float, mode: String): Boolean {
+        return try {
+            api.payStudentFees(mapOf("amount" to amount, "mode" to mode))
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun getStudentCirculars(): List<CircularDto> {
+        return try {
+            api.getStudentCirculars()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
 
