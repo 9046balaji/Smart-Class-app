@@ -102,6 +102,9 @@ class MainViewModel @Inject constructor(
     
     // Student Portal Expanded States
     val studentEligibility = MutableStateFlow<StudentEligibilityDto?>(null)
+    val studentAttendanceReport = MutableStateFlow<List<StudentAttendanceRecordDto>>(emptyList())
+    val attendanceFilterFrom = MutableStateFlow<String?>(null)
+    val attendanceFilterTo = MutableStateFlow<String?>(null)
     val studentODRequests = MutableStateFlow<List<ODRequestDto>>(emptyList())
     val studentMOOCEnrollments = MutableStateFlow<List<MOOCEnrollmentDto>>(emptyList())
     val isSubmittingOD = MutableStateFlow(false)
@@ -622,7 +625,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             if (currentRole.value == UserRole.student) {
                 loadProfile()
-                loadStudentEligibility()
+                loadStudentEligibility(attendanceFilterFrom.value, attendanceFilterTo.value)
+                loadStudentAttendanceReport(attendanceFilterFrom.value, attendanceFilterTo.value)
                 loadStudentODRequests()
                 loadStudentMOOCs()
             } else {
@@ -810,12 +814,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadStudentEligibility() {
+    fun loadStudentEligibility(fromDate: String? = null, toDate: String? = null) {
         viewModelScope.launch {
             try {
-                val data = repository.getStudentEligibility()
+                val data = repository.getStudentEligibility(fromDate, toDate)
                 studentEligibility.value = data
-                cgpaAnimated.value = studentProfile.value?.cgpa ?: (data.overall_percentage / 10.0)
+                if (cgpaAnimated.value == 0.0) {
+                    cgpaAnimated.value = studentProfile.value?.cgpa ?: (data.overall_percentage / 10.0)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadStudentAttendanceReport(fromDate: String? = null, toDate: String? = null) {
+        viewModelScope.launch {
+            try {
+                studentAttendanceReport.value = repository.getStudentAttendanceReport(fromDate, toDate)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
