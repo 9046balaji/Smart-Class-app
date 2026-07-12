@@ -530,5 +530,21 @@ class AppRepository @Inject constructor(
             false
         }
     }
+
+    suspend fun getStudentMarks(semester: String? = null): List<StudentMarksDto> {
+        return try {
+            api.getStudentMarks(semester)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getStudentResults(): List<SemesterResultDto> {
+        return try {
+            api.getStudentResults()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
 
