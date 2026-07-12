@@ -355,6 +355,29 @@ data class SemesterResultDto(
 )
 
 
+data class BacklogRecordDto(
+    val subject_code: String,
+    val subject_name: String,
+    val semester_failed: String,
+    val attempts: Int,
+    val next_exam_window: String,
+    val status: String
+)
+
+data class BacklogsSummaryDto(
+    val active_backlogs: List<BacklogRecordDto>,
+    val cleared_backlogs_count: Int
+)
+
+data class MentorDto(
+    val mentor_name: String,
+    val mentor_email: String,
+    val mentor_phone: String,
+    val office_hours: String,
+    val department: String
+)
+
+
 data class PlatformStatsDto(
     val enrolled: Int,
     val completed: Int,
@@ -681,6 +704,12 @@ interface RetrofitApi {
 
     @GET("student/results")
     suspend fun getStudentResults(): List<SemesterResultDto>
+
+    @GET("student/backlogs")
+    suspend fun getStudentBacklogs(): BacklogsSummaryDto
+
+    @GET("student/mentor")
+    suspend fun getStudentMentor(): MentorDto
 
     @POST("student/attendance/check-in")
     suspend fun submitBleCheckIn(@Body req: BleCheckInRequest): AttendanceScanResult
