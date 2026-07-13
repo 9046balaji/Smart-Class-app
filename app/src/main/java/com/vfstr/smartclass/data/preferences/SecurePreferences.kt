@@ -31,8 +31,7 @@ class SecurePreferences @Inject constructor(@ApplicationContext private val cont
                 context.deleteSharedPreferences("smartclass_secure_prefs")
                 createEncryptedPrefs()
             } catch (e2: Exception) {
-                // Last resort: Fallback to normal SharedPreferences (data will be unencrypted)
-                context.getSharedPreferences("smartclass_prefs_fallback", Context.MODE_PRIVATE)
+                throw IllegalStateException("Failed to initialize secure storage. Fallback is disabled for security compliance.", e2)
             }
         }
     }

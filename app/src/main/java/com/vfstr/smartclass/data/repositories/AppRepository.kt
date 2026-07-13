@@ -187,7 +187,8 @@ class AppRepository @Inject constructor(
             attendanceCount = dto.attendance_count ?: dto.count ?: 0,
             totalStudents = dto.total_students ?: dto.total ?: 0,
             durationMinutes = dto.duration_minutes ?: 50,
-            timetableSlotId = dto.timetable_slot_id
+            timetableSlotId = dto.timetable_slot_id,
+            bleKey = dto.ble_key
         )
     }
 

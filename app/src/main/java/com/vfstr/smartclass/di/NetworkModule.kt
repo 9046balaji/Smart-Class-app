@@ -52,12 +52,25 @@ object NetworkModule {
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (com.vfstr.smartclass.BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
+        
+        val pinnerBuilder = okhttp3.CertificatePinner.Builder()
+        if (!com.vfstr.smartclass.BuildConfig.DEBUG) {
+            // Pin the production server domain to prevent MITM attacks
+            pinnerBuilder.add("smartclass.vignan.ac.in", "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+        }
+        val pinner = pinnerBuilder.build()
+
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .authenticator(tokenAuthenticator)
             .addInterceptor(logging)
+            .certificatePinner(pinner)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
