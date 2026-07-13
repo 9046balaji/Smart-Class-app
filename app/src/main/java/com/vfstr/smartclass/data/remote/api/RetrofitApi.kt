@@ -149,7 +149,8 @@ data class SessionDto(
     val total_students: Int? = null,
     val total: Int? = null,
     val timetable_slot_id: String? = null,
-    val duration_minutes: Int? = null
+    val duration_minutes: Int? = null,
+    val ble_key: String? = null
 )
 
 data class CreateSessionPayload(

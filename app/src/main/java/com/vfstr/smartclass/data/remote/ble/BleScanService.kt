@@ -64,6 +64,12 @@ class BleScanService : Service() {
         // All hardware and permission logic MUST happen after startForeground
         serviceScope.launch {
             try {
+                if (com.vfstr.smartclass.utils.security.RootDetection.isDeviceRooted()) {
+                    updateNotification("Sync Blocked", "BLE attendance disabled on rooted devices.")
+                    Log.w("BLE", "Rooted device detected, service idling for security.")
+                    return@launch
+                }
+
                 if (!hasRequiredPermissions()) {
                     updateNotification("Sync Paused", "Grant permissions to enable classroom detection.")
                     Log.w("BLE", "Missing permissions, service idling...")

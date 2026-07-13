@@ -46,14 +46,15 @@ class BleAdvertiserService : Service() {
         bluetoothLeAdvertiser = manager.adapter.bluetoothLeAdvertiser
 
         val sessionId = intent?.getStringExtra("SESSION_ID")
+        val bleKey = intent?.getStringExtra("BLE_KEY")
         if (sessionId != null) {
-            startAdvertisingSession(sessionId)
+            startAdvertisingSession(sessionId, bleKey)
         }
 
         return START_STICKY
     }
 
-    private fun startAdvertisingSession(sessionId: String) {
+    private fun startAdvertisingSession(sessionId: String, bleKey: String? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_ADVERTISE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 Log.e("BLE", "Bluetooth Advertise permission not granted")
@@ -68,7 +69,7 @@ class BleAdvertiserService : Service() {
             .setConnectable(false)
             .build()
 
-        val encryptedPayload = CryptoUtils.encryptSessionToken(sessionId)
+        val encryptedPayload = CryptoUtils.encryptSessionToken(sessionId, bleKey)
 
         val data = AdvertiseData.Builder()
             .addServiceUuid(ParcelUuid(UUID.fromString(VFSTR_BLE_SERVICE_UUID)))
