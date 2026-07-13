@@ -66,7 +66,8 @@ data class ClassSession(
     val attendanceCount: Int,
     val totalStudents: Int,
     val durationMinutes: Int = 50,
-    val timetableSlotId: String? = null
+    val timetableSlotId: String? = null,
+    val bleKey: String? = null
 )
 
 data class Student(
