@@ -72,6 +72,21 @@ import com.vfstr.smartclass.ui.screens.enrollment.*
 import com.vfstr.smartclass.ui.screens.studentportal.*
 import com.vfstr.smartclass.ui.screens.profile.ProfileScreen
 import com.vfstr.smartclass.ui.screens.profile.SettingsScreen
+
+// New screens imports
+import com.vfstr.smartclass.ui.screens.staff.ScreenMarkAppeal
+import com.vfstr.smartclass.ui.screens.timetable.ScreenTimetableAuthor
+import com.vfstr.smartclass.ui.screens.staff.ScreenFacultyWorkload
+import com.vfstr.smartclass.ui.screens.students.ScreenPlacementSync
+import com.vfstr.smartclass.ui.screens.students.ScreenHostelSync
+import com.vfstr.smartclass.ui.screens.audit.ScreenArchival
+import com.vfstr.smartclass.ui.screens.hierarchy.ScreenCurriculum
+import com.vfstr.smartclass.ui.screens.hierarchy.ScreenSabbatical
+import com.vfstr.smartclass.ui.screens.sessions.ScreenExamConsole
+import com.vfstr.smartclass.ui.screens.audit.ScreenGrievance
+import com.vfstr.smartclass.ui.screens.studentportal.ScreenParentPortal
+import com.vfstr.smartclass.ui.screens.devices.ScreenLibraryGating
+import com.vfstr.smartclass.ui.screens.hierarchy.ScreenCampusConfig
 import com.vfstr.smartclass.ui.theme.MyApplicationTheme
 import com.vfstr.smartclass.ui.theme.DesignSystem
 import com.vfstr.smartclass.utils.RoleGuard
@@ -295,6 +310,21 @@ class MainActivity : FragmentActivity() {
                                 resolvedScreen == Navigation.ROUTE_AUDIT -> ScreenAudit(vm = vm)
                                 resolvedScreen == Navigation.ROUTE_PROFILE -> ProfileScreen(vm = vm)
                                 resolvedScreen == Navigation.ROUTE_SETTINGS -> SettingsScreen(vm = vm)
+                                 
+                                 // New R22 and Operational Audit Screen routes
+                                 resolvedScreen == Navigation.ROUTE_MARK_APPEAL -> ScreenMarkAppeal(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_TIMETABLE_AUTHOR -> ScreenTimetableAuthor(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_FACULTY_WORKLOAD -> ScreenFacultyWorkload(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_PLACEMENT_SYNC -> ScreenPlacementSync(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_HOSTEL_SYNC -> ScreenHostelSync(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_ARCHIVAL -> ScreenArchival(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_CURRICULUM -> ScreenCurriculum(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_SABBATICAL -> ScreenSabbatical(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_EXAM_CONSOLE -> ScreenExamConsole(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_GRIEVANCE -> ScreenGrievance(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_PARENT_PORTAL -> ScreenParentPortal(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_LIBRARY_GATING -> ScreenLibraryGating(vm = vm)
+                                 resolvedScreen == Navigation.ROUTE_CAMPUS_CONFIG -> ScreenCampusConfig(vm = vm)
                                 
                                 // Enrollment Routes (Phase 4)
                                 resolvedScreen == Navigation.ROUTE_ENROLLMENT_ADMIN -> ScreenEnrollmentAdminDashboard(
