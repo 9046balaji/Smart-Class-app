@@ -50,6 +50,21 @@ object Navigation {
     const val ROUTE_SECTION_ATTENDANCE_DETAILS = "section-attendance-details"
     const val ROUTE_COMPLIANCE_DETAILED = "compliance-detailed"
 
+    // New R22 & Operational Audit screens
+    const val ROUTE_MARK_APPEAL = "mark-appeal"
+    const val ROUTE_TIMETABLE_AUTHOR = "timetable-author"
+    const val ROUTE_FACULTY_WORKLOAD = "faculty-workload"
+    const val ROUTE_PLACEMENT_SYNC = "placement-sync"
+    const val ROUTE_HOSTEL_SYNC = "hostel-sync"
+    const val ROUTE_ARCHIVAL = "archival"
+    const val ROUTE_CURRICULUM = "curriculum"
+    const val ROUTE_SABBATICAL = "sabbatical"
+    const val ROUTE_EXAM_CONSOLE = "exam-console"
+    const val ROUTE_GRIEVANCE = "grievance"
+    const val ROUTE_PARENT_PORTAL = "parent-portal"
+    const val ROUTE_LIBRARY_GATING = "library-gating"
+    const val ROUTE_CAMPUS_CONFIG = "campus-config"
+    
     // Enrollment Routes
     const val ROUTE_ENROLLMENT = "enrollment"
     const val ROUTE_ENROLLMENT_ADMIN = "enrollment/admin"
@@ -75,7 +90,10 @@ object Navigation {
             ROUTE_NOTIFICATIONS, ROUTE_ANALYTICS, ROUTE_STUDENT_ANALYTICS,
             ROUTE_STUDENT_REPORTS, ROUTE_MOOC, ROUTE_USERS, ROUTE_AUDIT, ROUTE_SCANNER,
             ROUTE_PROFILE, ROUTE_SETTINGS,
-            ROUTE_ENROLLMENT_ADMIN, ROUTE_ENROLLMENT_MANAGE, ROUTE_ENROLLMENT_BULK, ROUTE_ENROLLMENT_STUDENT_DETAIL
+            ROUTE_ENROLLMENT_ADMIN, ROUTE_ENROLLMENT_MANAGE, ROUTE_ENROLLMENT_BULK, ROUTE_ENROLLMENT_STUDENT_DETAIL,
+            ROUTE_MARK_APPEAL, ROUTE_TIMETABLE_AUTHOR, ROUTE_FACULTY_WORKLOAD, ROUTE_PLACEMENT_SYNC, ROUTE_HOSTEL_SYNC,
+            ROUTE_ARCHIVAL, ROUTE_CURRICULUM, ROUTE_SABBATICAL, ROUTE_EXAM_CONSOLE, ROUTE_GRIEVANCE,
+            ROUTE_LIBRARY_GATING, ROUTE_CAMPUS_CONFIG
         ),
         UserRole.admin to listOf(
             ROUTE_OVERVIEW, ROUTE_ATTENDANCE, ROUTE_ATTENDANCE_LOGS, ROUTE_SECTION_ATTENDANCE, ROUTE_SESSIONS,
@@ -84,24 +102,30 @@ object Navigation {
             ROUTE_NOTIFICATIONS, ROUTE_ANALYTICS, ROUTE_STUDENT_ANALYTICS,
             ROUTE_STUDENT_REPORTS, ROUTE_MOOC, ROUTE_USERS, ROUTE_SCANNER,
             ROUTE_PROFILE, ROUTE_SETTINGS,
-            ROUTE_ENROLLMENT_ADMIN, ROUTE_ENROLLMENT_MANAGE, ROUTE_ENROLLMENT_BULK, ROUTE_ENROLLMENT_STUDENT_DETAIL
+            ROUTE_ENROLLMENT_ADMIN, ROUTE_ENROLLMENT_MANAGE, ROUTE_ENROLLMENT_BULK, ROUTE_ENROLLMENT_STUDENT_DETAIL,
+            ROUTE_MARK_APPEAL, ROUTE_TIMETABLE_AUTHOR, ROUTE_FACULTY_WORKLOAD, ROUTE_PLACEMENT_SYNC, ROUTE_HOSTEL_SYNC,
+            ROUTE_CURRICULUM, ROUTE_SABBATICAL, ROUTE_EXAM_CONSOLE, ROUTE_GRIEVANCE,
+            ROUTE_LIBRARY_GATING, ROUTE_CAMPUS_CONFIG
         ),
         UserRole.faculty to listOf(
             ROUTE_OVERVIEW, ROUTE_ATTENDANCE, ROUTE_ATTENDANCE_LOGS, ROUTE_SECTION_ATTENDANCE, ROUTE_SESSIONS,
             ROUTE_OVERRIDE, ROUTE_TIMETABLE, ROUTE_SUMMARY, ROUTE_COMPLIANCE,
             ROUTE_LEAVEOD, ROUTE_NOTIFICATIONS, ROUTE_ANALYTICS,
             ROUTE_STUDENT_ANALYTICS, ROUTE_STUDENT_REPORTS, ROUTE_SCANNER,
-            ROUTE_PROFILE, ROUTE_SETTINGS
+            ROUTE_PROFILE, ROUTE_SETTINGS,
+            ROUTE_MARK_APPEAL
         ),
         UserRole.viewer to listOf(
             ROUTE_OVERVIEW, ROUTE_ATTENDANCE, ROUTE_ATTENDANCE_LOGS, ROUTE_SUMMARY, ROUTE_ANALYTICS,
             ROUTE_STUDENT_ANALYTICS, ROUTE_STUDENT_REPORTS,
-            ROUTE_PROFILE, ROUTE_SETTINGS
+            ROUTE_PROFILE, ROUTE_SETTINGS,
+            ROUTE_PARENT_PORTAL
         ),
         UserRole.student to listOf(
             ROUTE_STUDENT_PORTAL, ROUTE_STUDENT_OVERVIEW, ROUTE_STUDENT_ATTENDANCE,
             ROUTE_STUDENT_PERFORMANCE, ROUTE_STUDENT_ACADEMICS, ROUTE_STUDENT_OD, ROUTE_STUDENT_CERTIFICATES,
-            ROUTE_PROFILE, ROUTE_SETTINGS, ROUTE_ENROLLMENT
+            ROUTE_PROFILE, ROUTE_SETTINGS, ROUTE_ENROLLMENT,
+            ROUTE_PARENT_PORTAL
         )
     )
 
@@ -135,6 +159,22 @@ object Navigation {
         NavItem("student-analytics", "Student Analytics", Icons.Default.Psychology, ROUTE_STUDENT_ANALYTICS),
         NavItem("student-reports", "Student Reports", Icons.AutoMirrored.Filled.Assignment, ROUTE_STUDENT_REPORTS),
         NavItem("mooc", "MOOC Tracking", Icons.Default.Book, ROUTE_MOOC),
+        
+        // P2/P3 aligned items
+        NavItem("mark-appeal", "Mark Appeal", Icons.Default.Warning, ROUTE_MARK_APPEAL),
+        NavItem("timetable-author", "Timetable Author", Icons.Default.DateRange, ROUTE_TIMETABLE_AUTHOR, group = "admin"),
+        NavItem("faculty-workload", "Faculty Workload", Icons.Default.Assessment, ROUTE_FACULTY_WORKLOAD, group = "admin"),
+        NavItem("placement-sync", "Placement Sync", Icons.Default.Sync, ROUTE_PLACEMENT_SYNC, group = "admin"),
+        NavItem("hostel-sync", "Hostel Sync", Icons.Default.Home, ROUTE_HOSTEL_SYNC, group = "admin"),
+        NavItem("archival", "Archival Console", Icons.Default.Archive, ROUTE_ARCHIVAL, group = "admin"),
+        NavItem("curriculum", "Curriculum Registry", Icons.Default.Book, ROUTE_CURRICULUM, group = "admin"),
+        NavItem("sabbatical", "Sabbatical Registry", Icons.Default.CardMembership, ROUTE_SABBATICAL, group = "admin"),
+        NavItem("exam-console", "Exam Console", Icons.Default.Assessment, ROUTE_EXAM_CONSOLE, group = "admin"),
+        NavItem("grievance", "Grievance Desk", Icons.Default.Feedback, ROUTE_GRIEVANCE, group = "admin"),
+        NavItem("parent-portal", "Parent Portal", Icons.Default.SupervisorAccount, ROUTE_PARENT_PORTAL),
+        NavItem("library-gating", "Library Gating", Icons.Default.LocalLibrary, ROUTE_LIBRARY_GATING, group = "admin"),
+        NavItem("campus-config", "Campus Config", Icons.Default.Domain, ROUTE_CAMPUS_CONFIG, group = "admin"),
+
         NavItem("enrollment-admin", "Enrollment Requests", Icons.Default.AppRegistration, ROUTE_ENROLLMENT_ADMIN, group = "admin"),
         NavItem("enrollment-manage", "Manage Students", Icons.Default.ManageAccounts, ROUTE_ENROLLMENT_MANAGE, group = "admin"),
         NavItem("enrollment-bulk", "Bulk Upload", Icons.Default.UploadFile, ROUTE_ENROLLMENT_BULK, group = "admin"),
