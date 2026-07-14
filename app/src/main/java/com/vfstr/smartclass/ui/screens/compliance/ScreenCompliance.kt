@@ -3,6 +3,8 @@ package com.vfstr.smartclass.ui.screens.compliance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +34,8 @@ fun ScreenCompliance(
     vm: MainViewModel,
     modifier: Modifier = Modifier
 ) {
-    var activeTab by remember { mutableStateOf("Cycles") } // Cycles, Defaulters, Eligibility
+    var activeTab by remember { mutableStateOf("Cycles") } // Cycles, Defaulters, Eligibility, Fee Barring, R-Grade Ledger
+    val scrollState = rememberScrollState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -52,7 +55,7 @@ fun ScreenCompliance(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tab Switcher
+            // Tab Switcher (Scrollable Row)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -60,21 +63,28 @@ fun ScreenCompliance(
                     .clip(RoundedCornerShape(12.dp))
                     .background(DesignSystem.Surface)
                     .padding(4.dp)
+                    .horizontalScroll(scrollState)
             ) {
-                listOf("Cycles", "Defaulters", "Eligibility").forEach { tab ->
-                    val isSel = activeTab == tab
+                listOf("Cycles", "Defaulters", "Eligibility", "Fee Barring", "R-Grade").forEach { tab ->
+                    val isSel = (tab == "Cycles" && activeTab == "Cycles") ||
+                            (tab == "Defaulters" && activeTab == "Defaulters") ||
+                            (tab == "Eligibility" && activeTab == "Eligibility") ||
+                            (tab == "Fee Barring" && activeTab == "Fee Barring") ||
+                            (tab == "R-Grade" && activeTab == "R-Grade Ledger")
                     Box(
                         modifier = Modifier
-                            .weight(1f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSel) DesignSystem.Cyan.copy(alpha = 0.1f) else Color.Transparent)
-                            .clickable { activeTab = tab },
+                            .clickable { 
+                                activeTab = if (tab == "R-Grade") "R-Grade Ledger" else tab
+                            }
+                            .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = tab,
-                            fontSize = 13.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isSel) DesignSystem.Cyan else DesignSystem.TextSecondary
                         )
@@ -88,6 +98,60 @@ fun ScreenCompliance(
                 "Cycles" -> ReviewCyclesList(vm)
                 "Defaulters" -> DefaultersList(vm)
                 "Eligibility" -> EligibilityOverview()
+                "Fee Barring" -> FeeBarringTab()
+                "R-Grade Ledger" -> RGradeLedgerTab()
+            }
+        }
+    }
+}
+
+@Composable
+fun FeeBarringTab() {
+    val barred = listOf(
+        Pair("22L11A0518", "G. Tarun Reddy"),
+        Pair("22L11A0560", "S. Mahesh Babu")
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Students Barred due to Tuition Fee Dues", color = Color.White, fontWeight = FontWeight.Bold)
+        barred.forEach { (roll, name) ->
+            GlassmorphicCard {
+                Row(Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(DesignSystem.CardBg), contentAlignment = Alignment.Center) {
+                        Text(name.take(1), color = DesignSystem.Danger, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(roll, color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                    }
+                    Text("BARRED", color = DesignSystem.Danger, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RGradeLedgerTab() {
+    val repeats = listOf(
+        Triple("22L11A0545", "M. Sri Lekha", "Compiler Design (Repeat R22)"),
+        Triple("22L11A05B1", "P. Ajay Vardhan", "Linear Algebra (Repeat R18)")
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("R-Grade Repeat Course Registrations Ledger", color = Color.White, fontWeight = FontWeight.Bold)
+        repeats.forEach { (roll, name, course) ->
+            GlassmorphicCard {
+                Row(Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(DesignSystem.CardBg), contentAlignment = Alignment.Center) {
+                        Text(name.take(1), color = DesignSystem.Warning, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("$roll | $course", color = DesignSystem.TextSecondary, fontSize = 11.sp)
+                    }
+                    Text("REPEAT", color = DesignSystem.Warning, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                }
             }
         }
     }
