@@ -42,7 +42,8 @@ fun ScreenStudentReports(
         ReportType("year", "Year-wise", "Academic distribution", Icons.Default.Timeline, DesignSystem.Violet),
         ReportType("section", "Section-wise", "Section capacity analysis", Icons.Default.PieChart, Color(0xFFF97316)),
         ReportType("summary", "Summary", "Comprehensive overview", Icons.Default.Description, DesignSystem.Cyan),
-        ReportType("attendance", "Attendance", "Patterns and statistics", Icons.Default.EventAvailable, DesignSystem.Danger)
+        ReportType("attendance", "Attendance", "Patterns and statistics", Icons.Default.EventAvailable, DesignSystem.Danger),
+        ReportType("naac-nba", "NAAC/NBA Accreditation", "Accreditation audits and compliance", Icons.Default.Verified, DesignSystem.Violet)
     )
 
     Scaffold(
