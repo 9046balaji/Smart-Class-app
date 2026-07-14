@@ -82,6 +82,8 @@ class MainViewModel @Inject constructor(
     val timetableLoading = MutableStateFlow(false)
 
     val odRequests = MutableStateFlow<List<ODRequest>>(emptyList())
+    val condonationRequests = MutableStateFlow<List<CondonationRequest>>(emptyList())
+    val condonationsLoading = MutableStateFlow(false)
     
     // Audit & Notification Logs (Rule 2)
     val auditLogs = MutableStateFlow<List<AuditLog>>(emptyList())
@@ -655,6 +657,7 @@ class MainViewModel @Inject constructor(
                 loadSessions()
                 loadTimetable()
                 loadODRequests()
+                loadCondonationRequests()
                 loadAuditLogs()
                 loadNotificationLogs()
             }
@@ -824,6 +827,22 @@ class MainViewModel @Inject constructor(
             if (dept != null) filters["department"] = dept
             if (sec != null) filters["section"] = sec
             odRequests.value = repository.getODRequests(filters)
+        }
+    }
+
+    fun loadCondonationRequests(dept: String? = null, sec: String? = null) {
+        viewModelScope.launch {
+            condonationsLoading.value = true
+            try {
+                val filters = mutableMapOf<String, String>()
+                if (dept != null) filters["department"] = dept
+                if (sec != null) filters["section"] = sec
+                condonationRequests.value = repository.getCondonationRequests(filters)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                condonationsLoading.value = false
+            }
         }
     }
 
@@ -1065,8 +1084,28 @@ class MainViewModel @Inject constructor(
 
     fun approveLeaveODAction(id: String, comment: String) {
         viewModelScope.launch {
-            // In a real app, this would call the repository to update the status
-            // For now, we mock the success and refresh
+            repository.reviewODRequest(id, "approved", comment)
+            refreshAllData()
+        }
+    }
+
+    fun rejectLeaveODAction(id: String, comment: String) {
+        viewModelScope.launch {
+            repository.reviewODRequest(id, "rejected", comment)
+            refreshAllData()
+        }
+    }
+
+    fun approveCondonationAction(id: String, comment: String) {
+        viewModelScope.launch {
+            repository.reviewCondonationRequest(id, "approved", comment)
+            refreshAllData()
+        }
+    }
+
+    fun rejectCondonationAction(id: String, comment: String) {
+        viewModelScope.launch {
+            repository.reviewCondonationRequest(id, "rejected", comment)
             refreshAllData()
         }
     }
