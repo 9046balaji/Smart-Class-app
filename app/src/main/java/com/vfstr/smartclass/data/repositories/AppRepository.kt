@@ -385,6 +385,79 @@ class AppRepository @Inject constructor(
         )
     }
 
+    suspend fun getCondonationRequests(filters: Map<String, String>): List<CondonationRequest> = withContext(Dispatchers.Default) {
+        return@withContext try {
+            val dtoList = api.getCondonationRequests(filters)
+            dtoList.map { mapDtoToCondonationRequest(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun mapDtoToCondonationRequest(dto: CondonationRequestDto): CondonationRequest {
+        return CondonationRequest(
+            id = dto.id,
+            studentId = dto.student_id,
+            studentName = dto.student_name,
+            rollNo = dto.roll_number ?: dto.student_id,
+            department = dto.department,
+            year = dto.year,
+            section = dto.section,
+            subjectId = dto.subject_id,
+            subjectCode = dto.subject_code,
+            subjectName = dto.subject_name,
+            attendanceRate = dto.attendance_rate,
+            requiredRate = dto.required_rate,
+            reason = dto.reason,
+            supportingDocPath = dto.supporting_doc_path,
+            appliedOn = dto.applied_on ?: dto.created_at,
+            createdAt = dto.created_at,
+            hodId = dto.hod_id,
+            hodDecision = dto.hod_decision,
+            hodRemarks = dto.hod_remarks,
+            sessionsCondoned = dto.sessions_condoned,
+            resolvedAt = dto.resolved_at,
+            status = dto.status,
+            approvalHistory = dto.approval_history?.map { mapDtoToApprovalStep(it) } ?: emptyList()
+        )
+    }
+
+    private fun mapDtoToApprovalStep(dto: ApprovalHistoryItemDto): ApprovalStep {
+        return ApprovalStep(
+            id = dto.step,
+            stepTitle = dto.action,
+            roleLabel = dto.step,
+            state = when (dto.action.uppercase()) {
+                "APPROVED" -> StepState.COMPLETE
+                "REJECTED" -> StepState.REJECTED
+                else -> StepState.PENDING
+            },
+            actor = dto.actor,
+            timestamp = dto.timestamp,
+            comment = dto.comment
+        )
+    }
+
+    suspend fun reviewODRequest(id: String, status: String, comment: String): Boolean {
+        return try {
+            val body = mapOf("status" to status, "review_note" to comment)
+            api.reviewODRequest(id, body)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun reviewCondonationRequest(id: String, status: String, comment: String): Boolean {
+        return try {
+            val body = mapOf("status" to status, "hod_note" to comment)
+            api.reviewCondonationRequest(id, body)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun getHierarchy(): String = withContext(Dispatchers.IO) {
         context.assets.open("student_hierarchy.json").bufferedReader().use { it.readText() }
     }
