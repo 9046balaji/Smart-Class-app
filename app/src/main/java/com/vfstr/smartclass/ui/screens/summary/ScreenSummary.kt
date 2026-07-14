@@ -72,6 +72,22 @@ fun ScreenSummary(
 
             item {
                 GlassmorphicCard {
+                    Column(Modifier.padding(DesignSystem.PaddingLarge)) {
+                        Text("Semester-over-Semester Trend (VFSTR R22)", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(16.dp))
+                        AnimatedBarChart(
+                            data = listOf(78f, 82f, 85f, 81f, 84f, 86f),
+                            colors = listOf(DesignSystem.Cyan, DesignSystem.Success, DesignSystem.Violet, DesignSystem.Warning, DesignSystem.Cyan, DesignSystem.Success),
+                            modifier = Modifier.height(150.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Aggregate attendance percentages across Semesters 1 to 6", color = DesignSystem.TextMuted, fontSize = 10.sp)
+                    }
+                }
+            }
+
+            item {
+                GlassmorphicCard {
                     Row(
                         modifier = Modifier.padding(DesignSystem.PaddingLarge).fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
